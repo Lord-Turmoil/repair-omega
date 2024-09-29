@@ -1,4 +1,4 @@
-def get_file_content(filename: str, start_line: int, end_line: int):
+def file_get_content(filename: str, start_line: int, end_line: int):
     """
     Get the content of a file from start_line to end_line (both inclusive).
     Return empty string if the file does not exist or the range is invalid.
@@ -13,7 +13,7 @@ def get_file_content(filename: str, start_line: int, end_line: int):
     return "".join(lines[start_line - 1 : end_line])
 
 
-def get_decorated_file_content(filename: str, start_line: int, end_line: int):
+def file_get_decorated_content(filename: str, start_line: int, end_line: int):
     """
     Get the content of a file from start_line to end_line (both inclusive)
     with line_number in each line.

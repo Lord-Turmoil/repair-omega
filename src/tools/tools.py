@@ -1,7 +1,6 @@
 from tools.gdb_integration import gdb_instance
-from tools.file_utils import get_decorated_file_content, get_file_content
+from tools.file_utils import file_get_decorated_content, file_get_content
 from tools.lsp_integration import lsp_instance
-
 
 ######################################################################
 # LSP functions
@@ -13,14 +12,14 @@ def lsp_get_symbol_definition(filename, line, symbol):
     Will perform a fuzzy search around the line.
     """
     lsp = lsp_instance()
-    content = get_file_content(filename, line - 3, line + 3)
+    content = file_get_content(filename, line - 3, line + 3)
     for i, line in enumerate(content.split("\n"), max(1, line - 3)):
         pos = line.find(symbol)
         if pos != -1:
             response = lsp.definition(filename, i, pos + 1)
             start_line = response["range"]["start"]["line"] + 1
             end_line = response["range"]["end"]["line"] + 1
-            return get_decorated_file_content(filename, start_line, end_line)
+            return file_get_decorated_content(filename, start_line, end_line)
     return ""
 
 
@@ -30,7 +29,7 @@ def lsp_get_symbol_summary(filename, line, symbol):
     Will perform a fuzzy search around the line.
     """
     lsp = lsp_instance()
-    content = get_file_content(filename, line - 3, line + 3)
+    content = file_get_content(filename, line - 3, line + 3)
     for i, line in enumerate(content.split("\n"), max(1, line - 3)):
         pos = line.find(symbol)
         if pos != -1:
@@ -53,12 +52,13 @@ def lsp_get_function(filename, function):
             end_line = symbol["location"]["range"]["end"]["line"] + 1
             if end_line - start_line + 1 > size:
                 size = end_line - start_line
-                body = get_decorated_file_content(filename, start_line, end_line)
+                body = file_get_decorated_content(filename, start_line, end_line)
     return body
 
 
 ######################################################################
 # GDB functions
+
 
 def gdb_start():
     gdb = gdb_instance()

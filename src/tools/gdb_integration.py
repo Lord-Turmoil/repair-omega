@@ -1,5 +1,11 @@
+import logging
+from typing import Dict, List
 from pygdbmi.gdbcontroller import GdbController
 import os
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.FileHandler("gdb.log", "w"))
 
 
 def _parse_gdb_output(output):
@@ -11,49 +17,64 @@ def _parse_gdb_output(output):
 
 
 class GdbWrapper:
-    def __init__(self, executable, cwd=os.getcwd()) -> None:
+    def __init__(
+        self, executable, args: List[str], env: Dict[str, str], cwd=os.getcwd()
+    ) -> None:
+        assert os.path.exists(cwd)
+        assert os.path.exists(executable)
+
         self._controller = GdbController()
-        self._executable = os.path.join(cwd, executable)
+        self._executable = executable
+        self._args = args
+        self._env = env
         self._cwd = cwd
 
+    def _execute(self, cmd):
+        logger.info(cmd)
+        output = _parse_gdb_output(self._controller.write(cmd))
+        logger.info(output)
+        return output
+
     def start(self):
-        return _parse_gdb_output(
-            self._controller.write(f"-file-exec-and-symbols {self._executable}")
-        )
+        return self._execute(f"-file-exec-and-symbols {self._executable}")
 
     def run(self):
-        return _parse_gdb_output(self._controller.write("run"))
+        for key, value in self._env.items():
+            self._execute(f"set environment {key}={value}")
+        cmd = "run"
+        for arg in self._args:
+            cmd += f" {arg}"
+        return self._execute(cmd)
 
     def backtrace(self):
-        return _parse_gdb_output(self._controller.write("backtrace"))
+        return self._execute("backtrace")
 
     def frame(self, frame):
-        return _parse_gdb_output(self._controller.write(f"frame {frame}"))
+        return self._execute(f"frame {frame}")
 
     def print(self, expression):
-        return _parse_gdb_output(self._controller.write(f"print {expression}"))
+        return self._execute(f"print {expression}")
 
     def kill(self):
-        return self._controller.write("kill")
+        return self._execute("kill")
 
     def exit(self):
         self.kill()
         self._controller.exit()
 
-    def to_abs_path(self, filename):
-        if not filename.startswith(self._cwd):
-            return os.path.join(self._cwd, filename)
-        return filename
-
 
 class GdbWrapperFactory:
-    def __init__(self, executable, cwd=os.getcwd()) -> None:
+    def __init__(
+        self, executable, args: List[str], env: Dict[str, str], cwd=os.getcwd()
+    ) -> None:
         self._executable = executable
+        self._args = args
+        self._env = env
         self._cwd = cwd
         self._instance: GdbWrapper = None
 
     def _create(self):
-        return GdbWrapper(self._executable, self._cwd)
+        return GdbWrapper(self._executable, self._args, self._env, self._cwd)
 
     def get(self):
         if self._instance is None:
@@ -61,7 +82,8 @@ class GdbWrapperFactory:
         return self._instance
 
     def respawn(self):
-        self._instance.exit()
+        if self._instance is not None:
+            self._instance.exit()
         self._instance = None
 
 
@@ -71,11 +93,11 @@ class GdbWrapperFactory:
 GDB_FACTORY = None
 
 
-def gdb_init(executable, cwd=os.getcwd()):
+def gdb_init(executable, args=[], env={}, cwd=os.getcwd()):
     global GDB_FACTORY
     if GDB_FACTORY is not None:
         GDB_FACTORY.respawn()
-    GDB_FACTORY = GdbWrapperFactory(executable, cwd)
+    GDB_FACTORY = GdbWrapperFactory(executable, args, env, cwd)
 
 
 def gdb_instance():
@@ -92,7 +114,3 @@ def gdb_respawn():
 
 def gdb_exit():
     gdb_respawn()
-
-
-def gdb_to_abs_path(filename):
-    gdb_instance().to_abs_path(filename)

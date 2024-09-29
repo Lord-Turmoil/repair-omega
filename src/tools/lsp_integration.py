@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 
-from tools.file_utils import get_file_content
+from tools.file_utils import file_get_content
 
 
 def _to_lsp_request(id, method, params):
@@ -189,6 +189,7 @@ class LspWrapper:
         if not is_lsp_available(executable):
             raise FileNotFoundError(f"{executable} is not available")
         self._controller = LspController(executable, cwd)
+        self._cwd = cwd
 
     def definition(self, filename, line, character):
         self._controller.didOpen(filename)
@@ -216,6 +217,11 @@ class LspWrapper:
     def exit(self):
         self._controller.exit()
 
+    def to_abs_path(self, filename):
+        if not filename.startswith(self._cwd):
+            return os.path.join(self._cwd, filename)
+        return filename
+
 
 class LspWrapperFactory:
     def __init__(self, executable="clangd", cwd=os.getcwd()) -> None:
@@ -232,7 +238,8 @@ class LspWrapperFactory:
         return self._instance
 
     def respawn(self):
-        self._instance.exit()
+        if self._instance is not None:
+            self._instance.exit()
         self._instance = None
 
 
@@ -263,3 +270,7 @@ def lsp_respawn():
 
 def lsp_exit():
     lsp_respawn()
+
+
+def lsp_to_abs_path(filename):
+    return lsp_instance().to_abs_path(filename)
