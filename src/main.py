@@ -1,4 +1,6 @@
+import os
 from arguments import parse_args
+from prompt import CONSTRAINT, INITIAL_MESSAGE
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 from agent import agent_init
@@ -12,11 +14,17 @@ if __name__ == "__main__":
     assistant, user_proxy = agent_init(llm_config)
 
     # Start the conversation.
+    initial = INITIAL_MESSAGE
+    if profile["constraint"]:
+        initial += "\n" + CONSTRAINT.format(profile["constraint"])
     chat_result = user_proxy.initiate_chat(
         assistant,
-        message=f"Use the functions provided to analyze the crash in the program and give possible fix locations.",
+        message=initial,
     )
 
     # Terminate GDB and LSP.
     gdb_exit()
     lsp_exit()
+
+    if args.keep:
+        os.rename("log.log", f"log_{profile['profile']}.log")

@@ -27,3 +27,7 @@ SYSTEM_MESSAGE = (
     "If there are multiple fix locations, provide them in the same list. "
     "After you call `confirm()`, stop calling any functions and output TERMINATE to end this round."
 )
+
+INITIAL_MESSAGE = "Use the functions provided to analyze the crash in the program and give possible fix locations."
+
+CONSTRAINT = "You should pay attention to this constraint on related variables: {}"

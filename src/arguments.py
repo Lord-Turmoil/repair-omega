@@ -42,6 +42,13 @@ def load_profile(filename):
         profile["args"] = []
     if "env" not in profile:
         profile["env"] = {}
+    if "profile" not in profile:
+        profile["profile"] = os.path.splitext(os.path.basename(filename))[0]
+    if "constraint" not in profile:
+        profile["constraint"] = None
+    else:
+        if profile["constraint"] is None or profile["constraint"] == "":
+            profile["constraint"] = None
     return profile
 
 
@@ -60,6 +67,14 @@ def parse_args():
         type=str,
         required=True,
         help="Project profile",
+    )
+    parser.add_argument(
+        "-k",
+        "--keep",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Keep the log after execution",
     )
 
     args = parser.parse_args()
