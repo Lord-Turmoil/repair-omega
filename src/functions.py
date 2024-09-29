@@ -129,9 +129,9 @@ def switch_frame(frame: int) -> str:
         logger.error(f"Invalid frame: {frame}")
         return "Invalid frame number."
 
-    function = matches.group(1)
-    filename = matches.group(2)
-    line = matches.group(3)
+    function = matches.group(2)
+    filename = matches.group(4)
+    line = matches.group(5)
 
     message = f"Switched to frame {frame}, function {function} at {filename}:{line}.\n"
     message += file_get_content(filename, int(line), int(line))

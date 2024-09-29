@@ -34,6 +34,10 @@ def load_profile(filename):
         raise FileNotFoundError(f"Profile {filename} not found")
     with open(filename, "r") as f:
         profile = json.load(f)
+    for key in ["cwd", "exec", "src"]:
+        if key not in profile:
+            raise KeyError(f"Profile {filename} missing key {key}")
+        profile[key] = os.path.abspath(profile[key])
     if "args" not in profile:
         profile["args"] = []
     if "env" not in profile:

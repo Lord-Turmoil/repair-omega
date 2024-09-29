@@ -219,6 +219,8 @@ class LspWrapper:
 
     def to_abs_path(self, filename):
         if not filename.startswith(self._cwd):
+            if filename.startswith("./"):
+                filename = filename[2:]
             return os.path.join(self._cwd, filename)
         return filename
 

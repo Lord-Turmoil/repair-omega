@@ -20,7 +20,7 @@ class GdbWrapper:
     def __init__(
         self, executable, args: List[str], env: Dict[str, str], cwd=os.getcwd()
     ) -> None:
-        assert os.path.exists(cwd)
+        assert os.path.exists(executable)
         assert os.path.exists(executable)
 
         self._controller = GdbController()
@@ -39,6 +39,7 @@ class GdbWrapper:
         return self._execute(f"-file-exec-and-symbols {self._executable}")
 
     def run(self):
+        self._execute(f"set cwd {self._cwd}")
         for key, value in self._env.items():
             self._execute(f"set environment {key}={value}")
         cmd = "run"
