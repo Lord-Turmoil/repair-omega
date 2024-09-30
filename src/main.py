@@ -27,4 +27,5 @@ if __name__ == "__main__":
     lsp_exit()
 
     if args.keep:
-        os.rename("log.log", f"log_{profile['profile']}.log")
+        os.makedirs("log")
+        os.system(f"cp log.log log/{profile['profile']}.log")

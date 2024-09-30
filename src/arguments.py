@@ -81,6 +81,9 @@ def parse_args():
 
     profile = load_profile(args.profile)
     llm_config = load_config(args.config)
+    profile["profile"] += f"-{llm_config['model']}"
+    if profile["constraint"]:
+        profile["profile"] += "-c"
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
