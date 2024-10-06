@@ -110,7 +110,7 @@ def parse_args():
         "--dry",
         action="store_true",
         required=False,
-        default=True,
+        default=False,
         help="Dry run",
     )
 
