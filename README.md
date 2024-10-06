@@ -37,11 +37,12 @@ Every run is configured by a profile under `profile.d`. See `sample.json` for ex
     "init": "init", // (optional) path to the test case directory (default is None)
     "sandbox": "",  // (optional) path to the sandbox directory (defualt is .sandbox)
     "work": "",     // (optional) path to the working directory (default is .work)
-    "output": ""    // (optional) path to the output file (default is "locations.txt")
+    "output": "",   // (optional) path to the output file (default is "locations.txt")
+    "constraint": "(And (Slt s spp) (Slt s 8))" // (optional) constraint for the fix location (default is None)
 }
 ```
 
-Use the wrapper script `./run.sh` to run fix localization. If its your first run, you should specify `-d` to perform a dry run, other wise you can omit `-d` to use the modified source code in the sandbox. If you want to keep the logs, you can specify `-k` and logs will be output to `log/` directory with the name `<project>-<model>[-c].<type>.log` (`-c` means whether there is constraint).
+Use the wrapper script `./run.sh` to run fix localization. If its your first run, you should specify `-d` to perform a dry run, other wise you can omit `-d` to use the modified source code in the sandbox. If you want to keep the logs, you can specify `-k` and logs will be output to `log/` directory with a subdirectory and several files `<project>-<model>[-c]/<type>.log` (`-c` means whether there is constraint).
 
 ```bash
 ./run.sh -d -k
@@ -51,7 +52,17 @@ Use the wrapper script `./run.sh` to run fix localization. If its your first run
 
 ## Further Reading
 
-By default, `./run.sh` will look for profile as you pass in the first argument. If the file is not found, it will look for it in `profile.d` directory next to it.
+### Configuration
+
+By default, the program will look for the given profile with exact path and name, and if not found, it will look for it in `profile.d` directory next to it. You can specify the profile name with `-p` option.
+
+```bash
+./run.sh -d -k -p profile
+```
+
+For the `project` field, you can specify either absolute path or relative path to the current working directory. It is recommended to run the program under the root directory of the project using `run.sh`.
+
+### Log
 
 After running, it will generate three log files:
 
@@ -68,3 +79,18 @@ Previous log will be overwritten if you run the script again. To persist the log
 3. If `init` specified, will copy all files **under** the directory to the working directory. (Previous working directory will be removed.)
 4. Debug the project with the specified binary, arguments and environment under the working directory.
 5. If the program crashes, will try to fix the localization and output fix location to output file.
+
+### Note
+
+If the build command is complex, e.g. including multiple commands, you can write a shell script to wrap it and specify the script as the build command.
+
+```json
+{
+    // ...
+    "build": [
+        "bash",
+        "build.sh"
+    ],
+    // ...
+}
+```

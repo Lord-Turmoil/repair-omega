@@ -45,11 +45,13 @@ def build_project(profile):
         exit(1)
 
 
-def keep_log():
-    if not os.path.exists("log"):
-        os.makedirs("log")
-    shutil.copyfile("function.log", f"log/{profile['profile']}.function.log")
-    shutil.copyfile("log.log", f"log/{profile['profile']}.log.log")
+def keep_log(profile):
+    if not os.path.exists(f"log/{profile['profile']}"):
+        os.makedirs(f"log/{profile['profile']}")
+    shutil.copyfile("function.log", f"log/{profile['profile']}/function.log")
+    shutil.copyfile("log.log", f"log/{profile['profile']}/log.log")
+    shutil.copyfile("gdb.log", f"log/{profile['profile']}/gdb.log")
+    shutil.copyfile(profile["output"], f"log/{profile['profile']}/locations.txt")
 
 
 if __name__ == "__main__":
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     finally:
         # keep the log even if the chat aborts
         if args.keep:
-            keep_log()
+            keep_log(profile)
 
     # Terminate GDB and LSP.
     gdb_exit()
