@@ -1,6 +1,6 @@
 from tools.gdb_integration import gdb_instance
 from tools.file_utils import file_get_decorated_content, file_get_content
-from tools.lsp_integration import lsp_instance
+from tools.lsp_integration import lsp_instance, uri_to_path
 
 ######################################################################
 # LSP functions
@@ -17,9 +17,10 @@ def lsp_get_symbol_definition(filename, line, symbol):
         pos = line.find(symbol)
         if pos != -1:
             response = lsp.definition(filename, i, pos + 1)
+            file = uri_to_path(response["uri"])
             start_line = response["range"]["start"]["line"] + 1
             end_line = response["range"]["end"]["line"] + 1
-            return file_get_decorated_content(filename, start_line, end_line)
+            return file_get_decorated_content(file, start_line, end_line)
     return ""
 
 
