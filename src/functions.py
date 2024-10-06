@@ -27,7 +27,7 @@ from tools.lsp_integration import lsp_instance, lsp_to_abs_path, uri_to_path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.FileHandler("log.log", mode="w"))
+logger.addHandler(logging.FileHandler("function.log", mode="w"))
 
 
 ######################################################################
@@ -60,7 +60,7 @@ def run_program() -> str:
     """
     global started
 
-    logger.info("run_program")
+    logger.info("CALL> run_program")
 
     if not started:
         response = gdb_start()
@@ -71,9 +71,9 @@ def run_program() -> str:
     if "exited normally" in response:
         return "[PASSED] Program exited normally."
 
-    error = "\n".join(response.split("\n")[-2:])
-    message = f"[FAILED] Program crashed with the following stack trace:\n"
-    message += "The backtrace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
+    error = "\n".join(response.split("\n")[-3:-1])
+    message = f"[FAILED] Program crashed with error:\n{error}\n"
+    message += f"The stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
 
     backtrace = gdb_backtrace()
     # Hope this regex works.
@@ -89,6 +89,7 @@ def run_program() -> str:
             filename = matches.group(4)
             line = matches.group(5)
             message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
+    message += "\n"
 
     logger.info(message)
 
@@ -99,7 +100,7 @@ def print_value(expression: str) -> str:
     """
     Print the value of an expression in the current context.
     """
-    logger.info(f"print_value({expression})")
+    logger.info(f"CALL> print_value({expression})")
 
     expression = str(expression)
 
@@ -115,7 +116,7 @@ def switch_frame(frame: int) -> str:
     """
     Switch to a different stack frame.
     """
-    logger.info(f"switch_frame({frame})")
+    logger.info(f"CALL> switch_frame({frame})")
     frame = int(frame)
 
     response = gdb_frame(frame)
@@ -130,7 +131,7 @@ def switch_frame(frame: int) -> str:
         return "Invalid frame number."
 
     function = matches.group(2)
-    filename = matches.group(4)
+    filename = _to_abs_path(matches.group(4))
     line = matches.group(5)
 
     message = f"Switched to frame {frame}, function {function} at {filename}:{line}.\n"
@@ -150,8 +151,9 @@ def definition(filename: str, line: int, symbol: str) -> str:
     Get the definition of a symbol at a given position.
     It only gives the one-line definition location.
     """
+    logger.info(f"CALL> definition({filename}, {line}, {symbol})")
+
     filename = str(filename)
-    logger.info(f"definition({filename}, {line}, {symbol})")
     line = int(line)
     symbol = str(symbol)
 
@@ -171,7 +173,7 @@ def summary(filename: str, line: int, symbol: str) -> str:
     Get the summary of a symbol at a given position.
     It uses the "hover" feature of LSP.
     """
-    logger.info(f"summary({filename}, {line}, {symbol})")
+    logger.info(f"CALL> summary({filename}, {line}, {symbol})")
     filename = str(filename)
     line = int(line)
     symbol = str(symbol)
@@ -190,7 +192,7 @@ def function_body(filename: str, function: str) -> str:
     """
     Get the body of a function.
     """
-    logger.info(f"function_body({filename}, {function})")
+    logger.info(f"CALL> function_body({filename}, {function})")
     filename = str(filename)
     function = str(function)
 
@@ -211,7 +213,7 @@ def get_file_content(filename: str, start_line: int, end_line: int) -> str:
     Get the content of a file from start_line to end_line (both inclusive).
     It returns the content with decorated line number.
     """
-    logger.info(f"get_file_content({filename}, {start_line}, {end_line})")
+    logger.info(f"CALL> get_file_content({filename}, {start_line}, {end_line})")
     filename = str(filename)
     start_line = int(start_line)
     end_line = int(end_line)
@@ -225,11 +227,23 @@ def get_file_content(filename: str, start_line: int, end_line: int) -> str:
     return message
 
 
+FIX_LOCATION_OUTPUT = "locations.txt"
+
+
+def set_confirm_output(filename):
+    """
+    Set the output file for the confirmed bug locations.
+    This is not a function called by LLM. It's a configuration function.
+    """
+    global FIX_LOCATION_OUTPUT
+    FIX_LOCATION_OUTPUT = filename
+
+
 def confirm(locations: list[str]) -> str:
     """
     Confirm the locations of the bug.
     """
-    logger.info(f"confirm({locations})")
+    logger.info(f"CALL> confirm({locations})")
 
     content = ""
     if locations is None or len(locations) == 0:
@@ -237,7 +251,7 @@ def confirm(locations: list[str]) -> str:
     else:
         for location in locations:
             content += f"{location}\n"
-    with open("locations.txt", "w") as f:
+    with open(FIX_LOCATION_OUTPUT, "w") as f:
         f.write(content)
 
     return "Confirmed. TERMINATE"

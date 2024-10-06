@@ -1,7 +1,9 @@
 {
-    "cwd": "samples",
-    "exec": "samples/main",
-    "src": "samples",
+    "project": "sample",
+    "build": [
+        "make"
+    ],
+    "run": "main",
     "args": [
         "arg1",
         "arg2"
@@ -9,5 +11,9 @@
     "env": {
         "ENV1": "value1",
         "ENV2": "value2"
-    }
+    },
+    "init": "init",
+    "sandbox": "",
+    "work": "",
+    "output": ""
 }

@@ -1,7 +1,6 @@
 import argparse
-import logging
+import json
 import os
-from autogen.agentchat.conversable_agent import json
 import yaml
 
 
@@ -25,6 +24,16 @@ def load_config(filename="config.yaml"):
     return config
 
 
+def _contains(profile, key):
+    if not key in profile:
+        return False
+    if profile[key] is None:
+        return False
+    if isinstance(profile[key], str) and profile[key] == "":
+        return False
+    return True
+
+
 def load_profile(filename):
     if not filename.endswith(".json"):
         filename += ".json"
@@ -34,21 +43,41 @@ def load_profile(filename):
         raise FileNotFoundError(f"Profile {filename} not found")
     with open(filename, "r") as f:
         profile = json.load(f)
-    for key in ["cwd", "exec", "src"]:
+
+    for key in ["project", "build", "run"]:
         if key not in profile:
-            raise KeyError(f"Profile {filename} missing key {key}")
-        profile[key] = os.path.abspath(profile[key])
-    if "args" not in profile:
-        profile["args"] = []
-    if "env" not in profile:
-        profile["env"] = {}
-    if "profile" not in profile:
-        profile["profile"] = os.path.splitext(os.path.basename(filename))[0]
-    if "constraint" not in profile:
-        profile["constraint"] = None
+            raise KeyError(f"Profile {filename} missing required key {key}")
+
+    profile["project"] = os.path.abspath(profile["project"])
+
+    if not _contains(profile, "sandbox"):
+        profile["sandbox"] = ".sandbox"
+    profile["sandbox"] = os.path.abspath(profile["sandbox"])
+    profile["run"] = os.path.join(profile["sandbox"], profile["run"])
+
+    if not _contains(profile, "work"):
+        profile["work"] = ".work"
+    profile["work"] = os.path.abspath(profile["work"])
+
+    if not _contains(profile, "init"):
+        profile["init"] = None
     else:
-        if profile["constraint"] is None or profile["constraint"] == "":
-            profile["constraint"] = None
+        profile["init"] = os.path.join(profile["sandbox"], profile["init"])
+
+    if not _contains(profile, "output"):
+        profile["output"] = os.path.abspath("locations.txt")
+
+    if not _contains(profile, "args"):
+        profile["args"] = []
+    if not _contains(profile, "env"):
+        profile["env"] = {}
+    if not _contains(profile, "constraint"):
+        profile["constraint"] = None
+
+    # add profile identifier
+    if not _contains(profile, "profile"):
+        profile["profile"] = os.path.splitext(os.path.basename(filename))[0]
+
     return profile
 
 
@@ -76,6 +105,14 @@ def parse_args():
         default=False,
         help="Keep the log after execution",
     )
+    parser.add_argument(
+        "-d",
+        "--dry",
+        action="store_true",
+        required=False,
+        default=True,
+        help="Dry run",
+    )
 
     args = parser.parse_args()
 
@@ -84,10 +121,5 @@ def parse_args():
     profile["profile"] += f"-{llm_config['model']}"
     if profile["constraint"]:
         profile["profile"] += "-c"
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    logger.addHandler(logging.StreamHandler())
-    logger.info(f"Profile: {json.dumps(profile, indent=2)}")
 
     return args, profile, llm_config

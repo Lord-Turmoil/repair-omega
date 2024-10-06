@@ -21,7 +21,7 @@ class GdbWrapper:
         self, executable, args: List[str], env: Dict[str, str], cwd=os.getcwd()
     ) -> None:
         assert os.path.exists(executable)
-        assert os.path.exists(executable)
+        assert os.path.exists(cwd)
 
         self._controller = GdbController()
         self._executable = executable
@@ -44,7 +44,7 @@ class GdbWrapper:
             self._execute(f"set environment {key}={value}")
         cmd = "run"
         for arg in self._args:
-            cmd += f" {arg}"
+            cmd += f' "{arg}"'
         return self._execute(cmd)
 
     def backtrace(self):
