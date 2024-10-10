@@ -7,8 +7,7 @@ SYSTEM_MESSAGE_WITH_DBG = (
     "The crash or stop may be caused by an assertion failure or runtime errors. "
     "Your goal is to determine the fix location for the bug, which can be defined as follows:\n"
     "1. Several lines of code that needs modification or additional code to resolve the issue.\n"
-    "2. By replacing the code at the fix location, the program will run without crashing or stopping at the breakpoint.\n"
-    "3. Fix location is not the crash location, but the location where the bug can be fixed.\n"
+    "2. Fix location is not the crash location, but the location where the bug can be fixed.\n"
     "To obtain the necessary information, you have access to GDB for debugging and LSP for source code analysis. "
     "The functions available to you are as follows:\n"
     "**GDB Functions**:\n"
@@ -33,7 +32,6 @@ SYSTEM_MESSAGE_WITH_DBG = (
     "You can give slight variations in the line numbers to cover multiple lines. "
     "If there are multiple fix locations, provide them in the same list. "
     "After you call `confirm()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
-    "Additionally, you should only call functions and don't output analysis directly. "
 )
 
 SYSTEM_MESSAGE_WITHOUT_DBG = (
@@ -43,8 +41,7 @@ SYSTEM_MESSAGE_WITHOUT_DBG = (
     "The crash or stop may be caused by an assertion failure or runtime errors. "
     "Your goal is to determine the fix location for the bug, which can be defined as follows:\n"
     "1. Several lines of code that needs modification or additional code to resolve the issue.\n"
-    "2. By replacing the code at the fix location, the program will run without crashing or stopping at the breakpoint.\n"
-    "3. Fix location is not the crash location, but the location where the bug can be fixed.\n"
+    "2. Fix location is not the crash location, but the location where the bug can be fixed.\n"
     "To obtain the necessary information, you have access to LSP for source code analysis. "
     "The functions available to you are as follows:\n"
     "- `run_program`: Run the program. If it crashes, you will receive a backtrace of the stack frames, or PASSED if no bug.\n"
@@ -63,7 +60,6 @@ SYSTEM_MESSAGE_WITHOUT_DBG = (
     "You can give slight variations in the line numbers to cover multiple lines. "
     "If there are multiple fix locations, provide them in the same list. "
     "After you call `confirm()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
-    "Additionally, you should only call functions and don't output analysis directly. "
 )
 
 INITIAL_MESSAGE = "Use the functions provided to analyze the crash in the program and give possible fix locations."
