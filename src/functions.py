@@ -70,9 +70,13 @@ def run_program() -> str:
 
     if "exited normally" in response:
         return "[PASSED] Program exited normally."
-
-    error = "\n".join(response.split("\n")[-3:-1])
-    message = f"[FAILED] Program crashed with error:\n{error}\n"
+    message = ""
+    if "Breakpoint" in response:
+        message += "Program stopped at breakpoint.\n"
+        message += "\n".join(response.split("\n")[-3:-1])
+    else:
+        message += "Program crashed with error.\n"
+        message += "\n".join(response.split("\n")[-3:-1])
     message += f"The stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
 
     backtrace = gdb_backtrace()

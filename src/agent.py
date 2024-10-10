@@ -1,5 +1,4 @@
 from autogen import ConversableAgent, register_function
-from prompt import SYSTEM_MESSAGE
 from functions import (
     confirm,
     definition,
@@ -12,10 +11,10 @@ from functions import (
 )
 
 
-def agent_init(llm_config):
+def agent_init(llm_config, system_message):
     # Initialize LLM agent and user proxy.
     assistant = ConversableAgent(
-        name="Crosshair", system_message=SYSTEM_MESSAGE, llm_config=llm_config
+        name="Crosshair", system_message=system_message, llm_config=llm_config
     )
     user_proxy = ConversableAgent(
         name="Toolset",

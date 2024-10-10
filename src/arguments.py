@@ -7,7 +7,7 @@ import yaml
 def load_config(filename="config.yaml"):
     config = {}
 
-    entries = ["base_url", "api_key", "model"]
+    entries = ["base_url", "api_key", "model", "price"]
 
     with open(filename, "r") as f:
         CONFIG = yaml.load(f, Loader=yaml.FullLoader)
@@ -64,13 +64,12 @@ def load_profile(filename):
     else:
         profile["init"] = os.path.join(profile["sandbox"], profile["init"])
 
-    if not _contains(profile, "output"):
-        profile["output"] = os.path.abspath("locations.txt")
-
     if not _contains(profile, "args"):
         profile["args"] = []
     if not _contains(profile, "env"):
         profile["env"] = {}
+    if not _contains(profile, "breakpoints"):
+        profile["breakpoints"] = []
     if not _contains(profile, "constraint"):
         profile["constraint"] = None
 
@@ -96,6 +95,21 @@ def parse_args():
         type=str,
         required=True,
         help="Project profile",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=False,
+        default="locations.txt",
+        help="Output file for confirmed bug locations",
+    )
+    parser.add_argument(
+        "--no-debug",
+        action="store_true",
+        required=False,
+        default=False,
+        help="No debugging",
     )
     parser.add_argument(
         "-k",
@@ -125,8 +139,14 @@ def parse_args():
 
     profile = load_profile(args.profile)
     llm_config = load_config(args.config)
+
     profile["profile"] += f"-{llm_config['model']}"
     if profile["constraint"]:
         profile["profile"] += "-c"
+    if args.no_debug:
+        profile["profile"] += "-nd"
+
+    profile["output"] = args.output
+    profile["debug"] = not args.no_debug
 
     return args, profile, llm_config

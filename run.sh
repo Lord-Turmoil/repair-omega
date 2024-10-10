@@ -14,7 +14,8 @@ config="config.yaml"
 dry=0
 keep=0
 build_only=0
-while getopts "p:c:dkbh" opt; do
+no_dbg=0
+while getopts "p:c:dkbnh" opt; do
     case ${opt} in
         p )
             profile=$OPTARG
@@ -30,6 +31,9 @@ while getopts "p:c:dkbh" opt; do
             ;;
         b )
             build_only=1
+            ;;
+        n )
+            no_dbg=1
             ;;
         h )
             usage
@@ -53,6 +57,9 @@ if [ $keep -eq 1 ]; then
 fi
 if [ $build_only -eq 1 ]; then
     options="$options --build-only"
+fi
+if [ $no_dbg -eq 1 ]; then
+    options="$options --no-debug"
 fi
 
 python3 src/main.py $options

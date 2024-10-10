@@ -26,14 +26,17 @@ Every run is configured by a profile under `profile.d`. See `sample.json` for ex
 
 ```json
 {
-    "project": "sample",        // path of the project
-    "build": [ "make" ],        // build command
-    "run": "main",              // relative path to the binary (after build) to the project root
+    "project": "sample", // path of the project
+    "build": [ "make" ], // build command
+    "run": "main",       // relative path to the binary (after build) to the project root
     "args": [ "arg1", "arg2" ], // (optional) arguments to pass to the program
     "env": {                    // (optional) environment variables to set for the program
         "ENV1": "value1",
         "ENV2": "value2"
     },
+    "breakpoints": [            // (optional) breakpoints to set on start of the program
+        "main.c:31"
+    ],
     "init": "init", // (optional) path to the test case directory (default is None)
     "sandbox": "",  // (optional) path to the sandbox directory (defualt is .sandbox)
     "work": "",     // (optional) path to the working directory (default is .work)
