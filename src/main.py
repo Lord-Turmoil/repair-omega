@@ -54,7 +54,7 @@ def keep_log(profile):
     shutil.copyfile("log.log", f"log/{profile['profile']}/log.log")
     shutil.copyfile("function.log", f"log/{profile['profile']}/function.log")
     shutil.copyfile("gdb.log", f"log/{profile['profile']}/gdb.log")
-    shutil.copyfile(profile["output"], f"log/{profile['profile']}/locations.txt")
+    shutil.copyfile(profile["output"], f"log/{profile['profile']}/locations.json")
 
 
 if __name__ == "__main__":

@@ -101,7 +101,7 @@ def parse_args():
         "--output",
         type=str,
         required=False,
-        default="locations.txt",
+        default="locations.json",
         help="Output file for confirmed bug locations",
     )
     parser.add_argument(

@@ -6,5 +6,4 @@ log/
 config.yaml
 .sandbox
 .work
-snapshot.json
-
+/*.json

@@ -9,9 +9,10 @@
 # each function is to convert the relative path to an absolute path.
 #
 
+import json
 import logging
-import os
 import re
+from typing import List
 from tools.tools import (
     gdb_backtrace,
     gdb_frame,
@@ -23,7 +24,7 @@ from tools.tools import (
     lsp_get_symbol_summary,
 )
 from tools.file_utils import file_get_content, file_get_decorated_content
-from tools.lsp_integration import lsp_instance, lsp_to_abs_path, uri_to_path
+from tools.lsp_integration import lsp_to_abs_path, uri_to_path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -243,19 +244,14 @@ def set_confirm_output(filename):
     FIX_LOCATION_OUTPUT = filename
 
 
-def confirm(locations: list[str]) -> str:
+def confirm(locations: List[str], root_cause: str) -> str:
     """
     Confirm the locations of the bug.
     """
     logger.info(f"CALL> confirm({locations})")
 
-    content = ""
-    if locations is None or len(locations) == 0:
-        content = "No bug."
-    else:
-        for location in locations:
-            content += f"{location}\n"
+    content = {"root_cause": root_cause, "locations": locations}
     with open(FIX_LOCATION_OUTPUT, "w") as f:
-        f.write(content)
+        f.write(json.dumps(content, indent=4))
 
-    return "Confirmed. TERMINATE"
+    return "Confirmed, respond with TERMINATE"
