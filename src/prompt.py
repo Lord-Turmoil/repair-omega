@@ -29,7 +29,7 @@ SYSTEM_MESSAGE_WITH_DBG = (
     "Don't call one function with the same parameters multiple times in a single round. "
     "After identifying the possible fix locations, call `confirm()` with the fix locations in the format of <filename>:<start line>-<end line> in a list. "
     "If there are multiple fix locations, provide them in the same list. "
-    "After you call `confirm()`, stop calling any functions and output TERMINATE immediately to end this round.\n"
+    "After you call `confirm()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
     "Additionally, you should only call functions and don't output analysis directly. "
 )
 
@@ -56,7 +56,7 @@ SYSTEM_MESSAGE_WITHOUT_DBG = (
     "Don't call one function with the same parameters multiple times in a single round. "
     "After identifying the possible fix locations, call `confirm()` with the fix locations in the format of <filename>:<start line>-<end line> in a list. "
     "If there are multiple fix locations, provide them in the same list. "
-    "After you call `confirm()`, stop calling any functions and output TERMINATE immediately to end this round.\n"
+    "After you call `confirm()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
     "Additionally, you should only call functions and don't output analysis directly. "
 )
 

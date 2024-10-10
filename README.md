@@ -83,6 +83,23 @@ Previous log will be overwritten if you run the script again. To persist the log
 4. Debug the project with the specified binary, arguments and environment under the working directory.
 5. If the program crashes, will try to fix the localization and output fix location to output file.
 
+### Batch Run
+
+There are currently many options to run on a project, they are:
+
+- constraint + debug
+- debug only
+- constraint only
+- nothing
+
+To run these "presets" at once, you can use the `batch_run.sh`. To use it, prepare two profiles: `<profile>` (no constraint) and `<profile>-c` (with constraint), and run the following command:
+
+```bash
+./batch_run.sh -p <profile>
+```
+
+It will run all the presets automatically.
+
 ### Note
 
 If the build command is complex, e.g. including multiple commands, you can write a shell script to wrap it and specify the script as the build command.

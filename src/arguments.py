@@ -142,6 +142,9 @@ def parse_args():
 
     profile["profile"] += f"-{llm_config['model']}"
     if profile["constraint"]:
+        # make constraint to the end for sorting
+        if "-c" in profile["profile"]:
+            profile["profile"] = profile["profile"].replace("-c", "")
         profile["profile"] += "-c"
     if args.no_debug:
         profile["profile"] += "-nd"

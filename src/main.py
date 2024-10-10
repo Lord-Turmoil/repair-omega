@@ -3,13 +3,12 @@ import logging
 import os
 from arguments import parse_args
 from functions import set_confirm_output
-from prompt import CONSTRAINT, INITIAL_MESSAGE, SYSTEM_MESSAGE_WITHOUT_DBG
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 from agent import agent_init
 import shutil
 import subprocess
-from prompt import SYSTEM_MESSAGE_WITH_DBG
+from prompt import CONSTRAINT, INITIAL_MESSAGE
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -47,9 +46,11 @@ def build_project(profile):
 
 
 def keep_log(profile):
-    if not os.path.exists(f"log/{profile['profile']}"):
-        os.makedirs(f"log/{profile['profile']}")
-    shutil.copyfile("dialog.json", f"log/{profile['profile']}/dialog.json")
+    if os.path.exists(f"log/{profile['profile']}"):
+        shutil.rmtree(f"log/{profile['profile']}")
+    os.makedirs(f"log/{profile['profile']}")
+
+    shutil.copyfile("snapshot.json", f"log/{profile['profile']}/snapshot.json")
     shutil.copyfile("log.log", f"log/{profile['profile']}/log.log")
     shutil.copyfile("function.log", f"log/{profile['profile']}/function.log")
     shutil.copyfile("gdb.log", f"log/{profile['profile']}/gdb.log")
@@ -58,7 +59,9 @@ def keep_log(profile):
 
 if __name__ == "__main__":
     args, profile, llm_config = parse_args()
-    logger.info(json.dumps(profile, indent=4))
+
+    # log of essential information
+    snapshot = {"profile": profile}
 
     if args.dry:
         logger.info("Preparing sandbox for dry run")
@@ -90,10 +93,7 @@ if __name__ == "__main__":
     lsp_init(cwd=profile["sandbox"])
 
     logger.info("Initializing agent")
-    system_message = (
-        SYSTEM_MESSAGE_WITH_DBG if profile["debug"] else SYSTEM_MESSAGE_WITHOUT_DBG
-    )
-    assistant, user_proxy = agent_init(llm_config, system_message)
+    assistant, user_proxy, system_message = agent_init(llm_config, profile["debug"])
 
     logger.info("Initiating chat")
     set_confirm_output(profile["output"])
@@ -110,15 +110,23 @@ if __name__ == "__main__":
         logger.error(f"Chat terminated with exception: {e}")
     finally:
         # keep the log even if the chat aborts
-        chat_log = {}
+        chat_log = {"system": system_message}
         if chat_result:
-            chat_log["dialog"] = chat_result.chat_history
+            chat_log["history"] = chat_result.chat_history
             chat_log["cost"] = chat_result.cost
         else:
-            chat_log["dialog"] = "Chat aborted"
+            chat_log["history"] = "Chat aborted"
             chat_log["cost"] = "N/A"
-        with open("dialog.json", "w") as f:
-            f.write(json.dumps(chat_log, indent=4))
+
+        snapshot["dialog"] = chat_log
+
+        with open(profile["output"], "r") as f:
+            locations = f.read().split("\n")
+        snapshot["locations"] = [line for line in locations if line.strip() != ""]
+
+        with open("snapshot.json", "w") as f:
+            f.write(json.dumps(snapshot, indent=4))
+
         if args.keep:
             keep_log(profile)
 

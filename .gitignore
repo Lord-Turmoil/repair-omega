@@ -6,5 +6,5 @@ log/
 config.yaml
 .sandbox
 .work
-dialog.json
+snapshot.json
 

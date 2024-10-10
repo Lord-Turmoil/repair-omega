@@ -1,11 +1,14 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: run.sh -p <profile> -c <config> -d -k"
+    echo "Usage: run.sh -p <profile> [-c <config>] [-d -k -b -n -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
     echo "  -c <config>  : specify the config file to use (default is config.yaml)"
     echo "  -d           : dry run, will initialize sandbox"
     echo "  -k           : keep the log files"
+    echo "  -b           : build only"
+    echo "  -n           : no debug"
+    echo "  -t           : auto terminate"
     exit 1
 }
 
@@ -15,7 +18,8 @@ dry=0
 keep=0
 build_only=0
 no_dbg=0
-while getopts "p:c:dkbnh" opt; do
+auto=0
+while getopts "p:c:dkbnth" opt; do
     case ${opt} in
         p )
             profile=$OPTARG
@@ -34,6 +38,9 @@ while getopts "p:c:dkbnh" opt; do
             ;;
         n )
             no_dbg=1
+            ;;
+        t )
+            auto=1
             ;;
         h )
             usage
@@ -62,4 +69,9 @@ if [ $no_dbg -eq 1 ]; then
     options="$options --no-debug"
 fi
 
-python3 src/main.py $options
+if [ $auto -eq 1 ]; then
+   echo exit | python3 src/main.py $options
+   echo ""
+else
+    python3 src/main.py $options
+fi

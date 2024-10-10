@@ -1,4 +1,8 @@
 from autogen import ConversableAgent, register_function
+from prompt import (
+    SYSTEM_MESSAGE_WITH_DBG,
+    SYSTEM_MESSAGE_WITHOUT_DBG,
+)
 from functions import (
     confirm,
     definition,
@@ -11,7 +15,11 @@ from functions import (
 )
 
 
-def agent_init(llm_config, system_message):
+def agent_init(llm_config, enable_debug=True):
+    system_message = (
+        SYSTEM_MESSAGE_WITH_DBG if enable_debug else SYSTEM_MESSAGE_WITHOUT_DBG
+    )
+
     # Initialize LLM agent and user proxy.
     assistant = ConversableAgent(
         name="Crosshair", system_message=system_message, llm_config=llm_config
@@ -38,18 +46,20 @@ def agent_init(llm_config, system_message):
         executor=user_proxy,
         description="Start debugging the given program in GDB and get the backtrace",
     )
-    register_function(
-        print_value,
-        caller=assistant,
-        executor=user_proxy,
-        description="Print the value of an expression in the current context",
-    )
-    register_function(
-        switch_frame,
-        caller=assistant,
-        executor=user_proxy,
-        description="Switch to a different stack frame in the backtrace",
-    )
+
+    if enable_debug:
+        register_function(
+            print_value,
+            caller=assistant,
+            executor=user_proxy,
+            description="Print the value of an expression in the current context",
+        )
+        register_function(
+            switch_frame,
+            caller=assistant,
+            executor=user_proxy,
+            description="Switch to a different stack frame in the backtrace",
+        )
 
     register_function(
         definition,
@@ -77,4 +87,4 @@ def agent_init(llm_config, system_message):
         description="Confirm the fix locations in the code",
     )
 
-    return assistant, user_proxy
+    return assistant, user_proxy, system_message
