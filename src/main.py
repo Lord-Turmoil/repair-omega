@@ -68,6 +68,10 @@ if __name__ == "__main__":
     logger.info("Preparing work directory")
     prepare_work(profile)
 
+    if args.build_only:
+        logger.info("Build only specified, exiting")
+        exit(0)
+
     logger.info("Initializing GDB")
     gdb_init(profile["run"], profile["args"], profile["env"], profile["work"])
     logger.info("Initializing LSP")

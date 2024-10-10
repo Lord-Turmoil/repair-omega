@@ -113,6 +113,13 @@ def parse_args():
         default=False,
         help="Dry run",
     )
+    parser.add_argument(
+        "--build-only",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Build only, used to test build process",
+    )
 
     args = parser.parse_args()
 

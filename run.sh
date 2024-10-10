@@ -13,7 +13,8 @@ profile="sample"
 config="config.yaml"
 dry=0
 keep=0
-while getopts "p:c:dkh" opt; do
+build_only=0
+while getopts "p:c:dkbh" opt; do
     case ${opt} in
         p )
             profile=$OPTARG
@@ -26,6 +27,9 @@ while getopts "p:c:dkh" opt; do
             ;;
         k )
             keep=1
+            ;;
+        b )
+            build_only=1
             ;;
         h )
             usage
@@ -46,6 +50,9 @@ if [ $dry -eq 1 ]; then
 fi
 if [ $keep -eq 1 ]; then
     options="$options --keep"
+fi
+if [ $build_only -eq 1 ]; then
+    options="$options --build-only"
 fi
 
 python3 src/main.py $options
