@@ -1,10 +1,12 @@
 from autogen import ConversableAgent, register_function
 from prompt import (
-    SYSTEM_MESSAGE_WITH_DBG,
-    SYSTEM_MESSAGE_WITHOUT_DBG,
+    FL_SYSTEM_DBG,
+    FL_SYSTEM_NO_DBG,
+    PG_SYSTEM,
 )
 from functions import (
-    confirm,
+    confirm_location,
+    confirm_patch,
     definition,
     function_body,
     get_file_content,
@@ -15,17 +17,15 @@ from functions import (
 )
 
 
-def agent_init(llm_config, enable_debug=True):
-    system_message = (
-        SYSTEM_MESSAGE_WITH_DBG if enable_debug else SYSTEM_MESSAGE_WITHOUT_DBG
-    )
+def agent_init_fl(llm_config, enable_debug=True):
+    system_message = FL_SYSTEM_DBG if enable_debug else FL_SYSTEM_NO_DBG
 
     # Initialize LLM agent and user proxy.
     assistant = ConversableAgent(
         name="Crosshair", system_message=system_message, llm_config=llm_config
     )
     user_proxy = ConversableAgent(
-        name="Toolset",
+        name="Fix Localization Toolset",
         llm_config=False,
         is_termination_msg=lambda msg: msg.get("content") is not None
         and "TERMINATE" in msg["content"],
@@ -81,10 +81,62 @@ def agent_init(llm_config, enable_debug=True):
     )
 
     register_function(
-        confirm,
+        confirm_location,
         caller=assistant,
         executor=user_proxy,
         description="Confirm the fix locations in the code",
+    )
+
+    return assistant, user_proxy, system_message
+
+
+def agent_init_pg(llm_config):
+    system_message = PG_SYSTEM
+
+    # Initialize LLM agent and user proxy.
+    assistant = ConversableAgent(
+        name="Tech", system_message=system_message, llm_config=llm_config
+    )
+    user_proxy = ConversableAgent(
+        name="Patch Generation Toolset",
+        llm_config=False,
+        is_termination_msg=lambda msg: msg.get("content") is not None
+        and "TERMINATE" in msg["content"],
+        human_input_mode="TERMINATE",
+    )
+
+    # Register functions.
+    register_function(
+        get_file_content,
+        caller=assistant,
+        executor=user_proxy,
+        description="Get the content of the given file from start line to end line",
+    )
+
+    register_function(
+        definition,
+        caller=assistant,
+        executor=user_proxy,
+        description="Get the definition of a symbol at a given position",
+    )
+    register_function(
+        summary,
+        caller=assistant,
+        executor=user_proxy,
+        description="Get the summary information of a symbol at a given position",
+    )
+    register_function(
+        function_body,
+        caller=assistant,
+        executor=user_proxy,
+        description="Get the body of the function in the given file",
+    )
+
+    register_function(
+        confirm_patch,
+        caller=assistant,
+        executor=user_proxy,
+        description="Confirm the patch for the fix location",
     )
 
     return assistant, user_proxy, system_message

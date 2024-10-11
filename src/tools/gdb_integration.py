@@ -22,7 +22,6 @@ class GdbWrapper:
         executable,
         args: List[str],
         env: Dict[str, str],
-        breakpoints: List[str],
         cwd=os.getcwd(),
     ) -> None:
         assert os.path.exists(executable)
@@ -32,7 +31,6 @@ class GdbWrapper:
         self._executable = executable
         self._args = args
         self._env = env
-        self._breakpoints = breakpoints
         self._cwd = cwd
 
     def _execute(self, cmd):
@@ -48,8 +46,6 @@ class GdbWrapper:
         self._execute(f"set cwd {self._cwd}")
         for key, value in self._env.items():
             self._execute(f"set environment {key}={value}")
-        for breakpoint in self._breakpoints:
-            self._execute(f"break {breakpoint}")
         cmd = "run"
         for arg in self._args:
             cmd += f' "{arg}"'
@@ -78,20 +74,16 @@ class GdbWrapperFactory:
         executable,
         args: List[str],
         env: Dict[str, str],
-        breakpoints: List[str],
         cwd=os.getcwd(),
     ) -> None:
         self._executable = executable
         self._args = args
         self._env = env
-        self._breakpoints = breakpoints
         self._cwd = cwd
         self._instance: GdbWrapper = None
 
     def _create(self):
-        return GdbWrapper(
-            self._executable, self._args, self._env, self._breakpoints, self._cwd
-        )
+        return GdbWrapper(self._executable, self._args, self._env, self._cwd)
 
     def get(self):
         if self._instance is None:
@@ -110,11 +102,11 @@ class GdbWrapperFactory:
 GDB_FACTORY = None
 
 
-def gdb_init(executable, args=[], env={}, breakpoints=[], cwd=os.getcwd()):
+def gdb_init(executable, args=[], env={}, cwd=os.getcwd()):
     global GDB_FACTORY
     if GDB_FACTORY is not None:
         GDB_FACTORY.respawn()
-    GDB_FACTORY = GdbWrapperFactory(executable, args, env, breakpoints, cwd)
+    GDB_FACTORY = GdbWrapperFactory(executable, args, env, cwd)
 
 
 def gdb_instance():

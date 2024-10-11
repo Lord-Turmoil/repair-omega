@@ -1,25 +1,26 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: run.sh -p <profile> [-c <config>] [-d -k -b -n -t]"
+    echo "Usage: run.sh -p <profile> [-c <config>] [-k -n -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
     echo "  -c <config>  : specify the config file to use (default is config.yaml)"
     echo "  -d           : dry run, will initialize sandbox"
     echo "  -k           : keep the log files"
-    echo "  -b           : build only"
     echo "  -n           : no debug"
     echo "  -t           : auto terminate"
     exit 1
 }
 
+fl=run_fl.sh
+pg=run_pg.sh
+vd=run_vd.sh
+
 profile="sample"
 config="config.yaml"
-dry=0
 keep=0
-build_only=0
 no_dbg=0
 auto=0
-while getopts "p:c:dkbnth" opt; do
+while getopts "p:c:knth" opt; do
     case ${opt} in
         p )
             profile=$OPTARG
@@ -27,14 +28,8 @@ while getopts "p:c:dkbnth" opt; do
         c )
             config=$OPTARG
             ;;
-        d )
-            dry=1
-            ;;
         k )
             keep=1
-            ;;
-        b )
-            build_only=1
             ;;
         n )
             no_dbg=1
@@ -51,27 +46,36 @@ while getopts "p:c:dkbnth" opt; do
     esac
 done
 
-if [ "$profile" == "sample" ]; then
-    echo -e "\033[33mWarning: using sample profile\033[0m"
-fi
-
-options="--config $config --profile $profile"
-if [ $dry -eq 1 ]; then
-    options="$options --dry"
-fi
+options="-c $config -p $profile"
 if [ $keep -eq 1 ]; then
-    options="$options --keep"
-fi
-if [ $build_only -eq 1 ]; then
-    options="$options --build-only"
+    options="$options -k"
 fi
 if [ $no_dbg -eq 1 ]; then
-    options="$options --no-debug"
+    options="$options -n"
+fi
+if [ $auto -eq 1 ]; then
+    options="$options -t"
 fi
 
-if [ $auto -eq 1 ]; then
-   echo exit | python3 src/main.py $options
-   echo ""
-else
-    python3 src/main.py $options
+echo -e "\033[36mOptions: $options\033[0m"
+
+echo -e "\033[36mRunning Fix Localization\033[0m"
+bash $fl $options -d
+if [ $? -ne 0 ]; then
+    echo -e "\033[31mFix Localization failed\033[0m"
+    exit 1
+fi
+
+echo -e "\033[36mRunning Patch Generation\033[0m"
+bash $pg $options
+if [ $? -ne 0 ]; then
+    echo -e "\033[31mPatch Generation failed\033[0m"
+    exit 1
+fi
+
+echo -e "\033[36mRunning Validation\033[0m"
+bash $vd $options
+if [ $? -ne 0 ]; then
+    echo -e "\033[31mValidation failed\033[0m"
+    exit 1
 fi

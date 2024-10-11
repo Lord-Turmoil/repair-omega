@@ -68,8 +68,6 @@ def load_profile(filename):
         profile["args"] = []
     if not _contains(profile, "env"):
         profile["env"] = {}
-    if not _contains(profile, "breakpoints"):
-        profile["breakpoints"] = []
     if not _contains(profile, "constraint"):
         profile["constraint"] = None
 
@@ -80,7 +78,7 @@ def load_profile(filename):
     return profile
 
 
-def parse_args():
+def parse_args_fl():
     parser = argparse.ArgumentParser(
         prog="Omega",
         description="LLM with Debugger and Language Server",
@@ -95,14 +93,6 @@ def parse_args():
         type=str,
         required=True,
         help="Project profile",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=str,
-        required=False,
-        default="locations.json",
-        help="Output file for confirmed bug locations",
     )
     parser.add_argument(
         "--no-debug",
@@ -149,7 +139,101 @@ def parse_args():
     if args.no_debug:
         profile["profile"] += "-nd"
 
-    profile["output"] = args.output
     profile["debug"] = not args.no_debug
 
     return args, profile, llm_config
+
+
+def parse_args_pg():
+    parser = argparse.ArgumentParser(
+        prog="Tech",
+        description="Patch Generation",
+        epilog="Enjoy the program! :)",
+    )
+    parser.add_argument(
+        "-c", "--config", type=str, default="config.yaml", help="Configuration file"
+    )
+    parser.add_argument(
+        "-p",
+        "--profile",
+        type=str,
+        required=True,
+        help="Project profile",
+    )
+    # to make the log profile compatible with fix localization
+    parser.add_argument(
+        "--no-debug",
+        action="store_true",
+        required=False,
+        default=False,
+        help="No debugging",
+    )
+    parser.add_argument(
+        "-k",
+        "--keep",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Keep the log after execution",
+    )
+
+    args = parser.parse_args()
+
+    profile = load_profile(args.profile)
+    llm_config = load_config(args.config)
+
+    profile["profile"] += f"-{llm_config['model']}"
+    if profile["constraint"]:
+        # make constraint to the end for sorting
+        if "-c" in profile["profile"]:
+            profile["profile"] = profile["profile"].replace("-c", "")
+        profile["profile"] += "-c"
+    if args.no_debug:
+        profile["profile"] += "-nd"
+
+    profile["debug"] = not args.no_debug
+
+    return args, profile, llm_config
+
+
+def parse_args_validate():
+    parser = argparse.ArgumentParser(
+        prog="Hunter",
+        description="Patch valiation",
+        epilog="Enjoy the program! :)",
+    )
+
+    # dummy
+    parser.add_argument(
+        "-c", "--config", type=str, default="config.yaml", help="Configuration file"
+    )
+    parser.add_argument(
+        "-p",
+        "--profile",
+        type=str,
+        required=True,
+        help="Project profile",
+    )
+    # dummy
+    parser.add_argument(
+        "--no-debug",
+        action="store_true",
+        required=False,
+        default=False,
+        help="No debugging",
+    )
+    # dummy
+    parser.add_argument(
+        "-k",
+        "--keep",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Keep the log after execution",
+    )
+
+    args = parser.parse_args()
+
+    profile = load_profile(args.profile)
+
+    return args, profile, None

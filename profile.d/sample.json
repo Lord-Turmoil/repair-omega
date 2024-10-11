@@ -12,9 +12,6 @@
         "ENV1": "value1",
         "ENV2": "value2"
     },
-    "breakpoints": [
-        "main.c:31"
-    ],
     "init": "init",
     "sandbox": "",
     "work": ""

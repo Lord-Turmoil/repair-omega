@@ -1,7 +1,7 @@
 # All the prompts
 
-SYSTEM_MESSAGE_WITH_DBG = (
-    "You are an agent responsible for analyzing crashes in programs using GDB and LSP to identify possible fix locations for bugs. "
+FL_SYSTEM_DBG = (
+    "You are an security expert responsible for analyzing crashes in programs using GDB and LSP to identify possible fix locations for bugs. "
     "You will be presented with a program that crashes due to a bug, or stopped at a breakpoint. "
     "You may also be given a constraint on related variables, which is the expected state of the program. "
     "The crash or stop may be caused by an assertion failure or runtime errors. "
@@ -20,22 +20,22 @@ SYSTEM_MESSAGE_WITH_DBG = (
     "- `function_body`: Retrieve the complete definition of a function.\n"
     "- `get_file_content`: Get the content of a file from start line to end line.\n"
     "You must pass arguments to these functions strictly as required. "
+    "Don't call one function with the same parameters multiple times in a single round.\n"
     "Firstly, call and only call once `run_program` to start debugging the program. "
-    "If the program does not crash or stop, you should call `confirm()` with two None arguments. "
+    "If the program does not crash or stop, you should call `confirm_location()` with two None arguments. "
     "Otherwise, you need to use the functions to analyze the problem and identify the possible fix locations. "
-    "Use `switch_frame` to switch to a specific stack frame and `print_value` to inspect the values of variables. "
+    "Use `switch_frame` to switch to the given stack frames and `print_value` to inspect the values of variables. "
     "If constraint is given, think of the expected state of the program and compare it with the real state. "
     "You should analysis as many stack frames as possible to identify the possible fix locations. "
     "At the same time, use LSP functions to access the source code and understand the context. "
-    "Don't call one function with the same parameters multiple times in a single round. "
-    "After identifying the possible fix locations, call `confirm()` with the fix locations in the format of <filename>:<start line>-<end line> in a list, and a short summary of the root cause of the bug. "
+    "After identifying the possible fix locations, call `confirm_location()` with the fix locations in the format of <filename>:<start line>-<end line> in a list, and a short summary of the root cause of the bug. "
     "You can give slight variations in the line numbers to cover multiple lines. "
     "If there are multiple fix locations, provide them in the same list. "
-    "After you call `confirm()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
+    "After you call `confirm_location()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
 )
 
-SYSTEM_MESSAGE_WITHOUT_DBG = (
-    "You are an agent responsible for analyzing crashes in programs to identify possible fix locations for bugs. "
+FL_SYSTEM_NO_DBG = (
+    "You are an security expert responsible for analyzing crashes in programs using GDB and LSP to identify possible fix locations for bugs. "
     "You will be presented with a program that crashes due to a bug, or stopped at a breakpoint. "
     "You may also be given a constraint on related variables, which is the expected state of the program. "
     "The crash or stop may be caused by an assertion failure or runtime errors. "
@@ -50,18 +50,57 @@ SYSTEM_MESSAGE_WITHOUT_DBG = (
     "- `function_body`: Retrieve the complete definition of a function.\n"
     "- `get_file_content`: Get the content of a file from start line to end line.\n"
     "You must pass arguments to these functions strictly as required. "
+    "Don't call one function with the same parameters multiple times in a single round.\n"
     "Firstly, call and only call once `run_program` to get crash backtrace. "
-    "If the program does not crash or stop, you should call `confirm()` with None. "
+    "If the program does not crash or stop, you should call `confirm_location()` with None. "
     "Otherwise, you need to use the functions to analyze the problem and identify the possible fix locations. "
     "If constraint is given, think of the expected state of the program and compare it with the real state. "
     "Call these functions to access the source code and understand the context. "
-    "Don't call one function with the same parameters multiple times in a single round. "
-    "After identifying the possible fix locations, call `confirm()` with the fix locations in the format of <filename>:<start line>-<end line> in a list, and a short summary of the root cause of the bug. "
+    "After identifying the possible fix locations, call `confirm_location()` with the fix locations in the format of <filename>:<start line>-<end line> in a list, and a short summary of the root cause of the bug. "
     "You can give slight variations in the line numbers to cover multiple lines. "
     "If there are multiple fix locations, provide them in the same list. "
-    "After you call `confirm()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
+    "After you call `confirm_location()`, stop calling any functions and output TERMINATE in the next response to end this round.\n"
 )
 
-INITIAL_MESSAGE = "Use the functions provided to analyze the crash in the program and give possible fix locations."
+FL_INITIAL_MESSAGE = "Use the functions provided to analyze the crash in the program and give possible fix locations."
 
-CONSTRAINT = "You should pay attention to this constraint on related variables: {}"
+FL_CONSTRAINT = "You should pay attention to this constraint on related variables: {}"
+
+
+PG_SYSTEM = (
+    "You are an security expert responsible for fixing bugs in programs. "
+    "The bug of the program is analyzed by another expert and the possible fix locations are provided. "
+    "The fix locations include possible locations for modifications or additional code to resolve the issue and a summary of the root cause of the bug. "
+    "Your goal is to provide the correct fix for the bug.\n"
+    "To obtain the necessary information, you have access to a language server for source code analysis. "
+    "The available functions are as follows:\n"
+    "- `definition`: Get the definition of a symbol in the code.\n"
+    "- `summary`: Retrieve a summary of a symbol (e.g., function or variable).\n"
+    "- `function_body`: Retrieve the complete definition of a function.\n"
+    "- `get_file_content`: Get the content of a file from start line to end line.\n"
+    "You must pass arguments to these functions strictly as required. "
+    "Don't call one function with the same parameters multiple times in a single round.\n"
+    "You should use these functions to access the source code and understand the context. "
+    "The fix can be a modification or addition to the code, and it can be done in one file. "
+    "After you have made the fix, call `confirm_patch()` with the patch.\n"
+    "If it is modification, provide the filename, modified range and patch in the following format, so that the patch can be done by simply replacing lines from start to end:\n"
+    "```json"
+    '{"filename": "<filename>", "start": <start line>, "end": <end line>, "patch": "<patch>"}'
+    "```\n"
+    "If it only involves addition, provide the filename, insertion line and patch in the following format, so that the patch can be done by inserting the patch right after the specified line:\n"
+    "```json"
+    '{"filename": "<filename>", "line": <line>, "patch": "<patch>"}'
+    "```\n"
+    "The fix range can be smaller or larger than the provided fix location, but it should cover the modification or addition. "
+    "The <patch> in both cases is a multi-line string. "
+    "Your patch should comply with the whole program and should not introduce syntax error or new bugs.\n"
+    'If confirmation is successful, you will receive a success message saying "Valid, respond with TERMINATE" and you should output TERMINATE in the next response to end this round. '
+    "Otherwirse, it will return an error message, and you should provide the correct patch again.\n"
+)
+
+PG_INITIAL_MESSAGE = (
+    "The root cause of the bug is summarized as follows: {}\n"
+    "And the possible fix locations are provided as follows in the format of <filename>:<start line>-<end line>\n"
+)
+
+PG_CONSTRAINT = "You should pay attention to this constraint on related variables: {}"

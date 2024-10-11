@@ -11,9 +11,16 @@
 
 import json
 import logging
+import os
 import re
+import sys
 from typing import List
+from consts import LOCALIZATION_OUTPUT, PATCH_OUTPUT
 from tools.tools import (
+    editor_backup_file,
+    editor_insert_after,
+    editor_replace,
+    editor_restore_file,
     gdb_backtrace,
     gdb_frame,
     gdb_print,
@@ -70,7 +77,10 @@ def run_program() -> str:
         response = gdb_restart()
 
     if "exited normally" in response:
-        return "[PASSED] Program exited normally."
+        message = "[PASSED] Program exited normally."
+        logger.info(message)
+        return message
+
     message = ""
     if "Breakpoint" in response:
         message += "Program stopped at breakpoint.\n"
@@ -78,7 +88,7 @@ def run_program() -> str:
     else:
         message += "Program crashed with error.\n"
         message += "\n".join(response.split("\n")[-3:-1])
-    message += f"The stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
+    message += f"\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
 
     backtrace = gdb_backtrace()
     # Hope this regex works.
@@ -232,26 +242,107 @@ def get_file_content(filename: str, start_line: int, end_line: int) -> str:
     return message
 
 
-FIX_LOCATION_OUTPUT = "locations.txt"
-
-
-def set_confirm_output(filename):
-    """
-    Set the output file for the confirmed bug locations.
-    This is not a function called by LLM. It's a configuration function.
-    """
-    global FIX_LOCATION_OUTPUT
-    FIX_LOCATION_OUTPUT = filename
-
-
-def confirm(locations: List[str], root_cause: str) -> str:
+def confirm_location(locations: List[str], root_cause: str) -> str:
     """
     Confirm the locations of the bug.
     """
-    logger.info(f"CALL> confirm({locations})")
+    logger.info(f"CALL> confirm_location({locations})")
 
     content = {"root_cause": root_cause, "locations": locations}
-    with open(FIX_LOCATION_OUTPUT, "w") as f:
+    with open(LOCALIZATION_OUTPUT, "w") as f:
         f.write(json.dumps(content, indent=4))
 
-    return "Confirmed, respond with TERMINATE"
+    message = "Confirmed, respond with TERMINATE"
+
+    logger.info(message)
+
+    return message
+
+
+validate_callback = None
+
+
+def set_validate_callback(callback):
+    global validate_callback
+    validate_callback = callback
+
+
+patch_count = 0
+
+
+def confirm_patch(patch: dict) -> str:
+    """
+    Confirm the locations of the bug.
+    """
+    global patch_count
+
+    logger.info(f"CALL> confirm_patch({patch})")
+
+    with open(PATCH_OUTPUT, "w") as f:
+        f.write(json.dumps(patch, indent=4))
+
+    response = validate_callback()
+    if response == None:
+        message = "Valid, respond with TERMINATE"
+        logger.info(message)
+        return message
+
+    patch_count += 1
+    if patch_count >= 3:
+        # fake a valid response
+        with open(PATCH_OUTPUT, "w") as f:
+            patch = {"failed": f"Failed to generate patch after {patch_count} times"}
+            f.write(json.dumps(patch, indent=4))
+        message = "Valid, respond with TERMINATE"
+        logger.info(message)
+
+    message = f"The patch is not valid, please generate another patch. The reason is that: {response}"
+    logger.info(message)
+    return message
+
+
+######################################################################
+# Editor functions
+# These functions are not called by LLM.
+
+
+def apply_patch():
+    with open(PATCH_OUTPUT, "r") as f:
+        patch = json.load(f)
+
+    if not ("filename" in patch and "patch" in patch):
+        return False, "Invalid patch format"
+
+    filename = _to_abs_path(patch["filename"])
+    content = patch["patch"]
+
+    if not os.path.exists(filename):
+        return False, f"File {filename} not found"
+    editor_backup_file(filename)
+
+    if "line" in patch:
+        # addition
+        line = patch["line"]
+        editor_insert_after(filename, line, content)
+    elif "start" in patch and "end" in patch:
+        # modification
+        start = patch["start"]
+        end = patch["end"]
+        editor_replace(filename, start, end, content)
+    else:
+        return False, "Invalid patch format"
+
+    return True, None
+
+
+def undo_patch():
+    with open(PATCH_OUTPUT, "r") as f:
+        patch = json.load(f)
+
+    if not ("filename" in patch):
+        return False, "Invalid patch format"
+
+    filename = _to_abs_path(patch["filename"])
+    editor_restore_file(filename)
+
+    return True, None
