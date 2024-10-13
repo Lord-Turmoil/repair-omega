@@ -30,7 +30,7 @@ from tools.tools import (
     lsp_get_symbol_definition,
     lsp_get_symbol_summary,
 )
-from tools.file_utils import file_get_content, file_get_decorated_content
+from tools.file_utils import file_get_decorated_content
 from tools.lsp_integration import lsp_to_abs_path, uri_to_path
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,17 @@ def _to_abs_path(filename):
     convert the relative file path in GDB to an absolute path in LSP working
     directory.
     """
-    return lsp_to_abs_path(filename)
+    path, cwd = lsp_to_abs_path(filename)
+    if os.path.exists(path):
+        return path
+    basename = os.path.basename(filename)
+    # search for the file under cwd
+    for root, _, files in os.walk(cwd):
+        if basename in files:
+            return os.path.join(root, basename)
+    # failed to find the file
+    logger.error(f"File {filename} not found under {cwd}")
+    return filename
 
 
 def _uri_to_path(uri):
@@ -59,6 +69,25 @@ def _uri_to_path(uri):
 # GDB tool functions
 
 expected_func = None
+
+
+def _parse_stackframe(frame):
+    pattern_1 = re.compile(
+        r"#\s*(\d+)\s+0x[0-9a-fA-F]+\s+in\s+(\w+)\s*\(([^)]*)\)\s+at\s+(\S+):(\d+)"
+    )
+    pattern_2 = re.compile(r"#(\d+)\s+(\w+)\s*\((.*?)\)\s+at\s+([\w\.\-]+):(\d+)")
+
+    matches = pattern_1.search(frame)
+    if matches is None:
+        matches = pattern_2.search(frame)
+    if matches is None:
+        return None, None, None, None, None
+    frame_number = matches.group(1)
+    function = matches.group(2)
+    args = matches.group(3)
+    filename = matches.group(4)
+    line = matches.group(5)
+    return frame_number, function, args, filename, line
 
 
 def set_expected_function(function):
@@ -81,36 +110,23 @@ def run_program() -> str:
         logger.info(message)
         return message
 
-    print(response)
-
     message = "Program crashed with error.\n"
     message += "\n".join(response.split("\n")[-3:-1])
     message += f"\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>\n"
 
     backtrace = gdb_backtrace()
-    # Hope this regex works.
-    pattern = re.compile(
-        r"#\s*(\d+)\s+0x[0-9a-fA-F]+\s+in\s+(\w+)\s*\(([^)]*)\)\s+at\s+(\S+):(\d+)"
-    )
-
     expected_frame = None
-    for line in backtrace.split("\n"):
-        matches = pattern.search(line)
-        if matches is not None:
-            frame_number = matches.group(1)
-            function = matches.group(2)
-            args = matches.group(3)
-            filename = matches.group(4)
-            line = matches.group(5)
-            message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
-
-            if expected_func is not None and expected_func in function:
-                expected_frame = frame_number
-            elif expected_frame is None:
-                expected_frame = frame_number
-
-            if frame_number > 10:
-                message += "\nMore than 10 frames, stopping here."
+    for trace in backtrace.split("\n"):
+        frame_number, function, args, filename, line = _parse_stackframe(trace)
+        if frame_number is None:
+            continue
+        message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
+        if expected_func is not None and expected_func in function:
+            expected_frame = frame_number
+        elif expected_frame is None:
+            expected_frame = frame_number
+        if int(frame_number) > 20:
+            message += "\nMore than 20 frames, stopping here."
     message += "\n"
 
     if expected_frame is not None:
@@ -196,21 +212,13 @@ def run_to_line(filename: str, line: int) -> str:
         message += "\n".join(response.split("\n")[-3:-1])
     message += "\n"
     message += FL_AFTER_RUN_TO_LINE
-    message += "\n"
-    message += "Currently available stack frames:\n"
-    backtrace = gdb_backtrace()
-    pattern = re.compile(
-        r"#\s*(\d+)\s+0x[0-9a-fA-F]+\s+in\s+(\w+)\s*\(([^)]*)\)\s+at\s+(\S+):(\d+)"
-    )
-    for line in backtrace.split("\n"):
-        matches = pattern.search(line)
-        if matches is not None:
-            frame_number = matches.group(1)
-            function = matches.group(2)
-            args = matches.group(3)
-            filename = matches.group(4)
-            line = matches.group(5)
-            message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
+    # message += "\n"
+    # message += "Currently available stack frames:\n"
+    # backtrace = gdb_backtrace()
+    # for trace in backtrace.split("\n"):
+    #     frame_number, function, args, filename, line = _parse_stackframe(trace)
+    #     if frame_number is not None:
+    #         message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
 
     logger.info(message)
 

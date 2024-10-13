@@ -224,6 +224,8 @@ class LspWrapper:
             return os.path.join(self._cwd, filename)
         return filename
 
+    def get_cwd(self):
+        return self._cwd
 
 class LspWrapperFactory:
     def __init__(self, executable="clangd", cwd=os.getcwd()) -> None:
@@ -275,4 +277,5 @@ def lsp_exit():
 
 
 def lsp_to_abs_path(filename):
-    return lsp_instance().to_abs_path(filename)
+    lsp = lsp_instance()
+    return lsp.to_abs_path(filename), lsp.get_cwd()
