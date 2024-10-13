@@ -90,6 +90,7 @@ def _parse_stackframe(frame):
     return frame_number, function, args, filename, line
 
 
+# Not tool
 def set_expected_function(function):
     global expected_func
     expected_func = function
@@ -290,24 +291,7 @@ def function_body(filename: str, function: str) -> str:
 
 
 ######################################################################
-# Miscellaneous functions
-def get_file_content(filename: str, start_line: int, end_line: int) -> str:
-    """
-    Get the content of a file from start_line to end_line (both inclusive).
-    It returns the content with decorated line number.
-    """
-    logger.info(f"CALL> get_file_content({filename}, {start_line}, {end_line})")
-    filename = str(filename)
-    start_line = int(start_line)
-    end_line = int(end_line)
-
-    filename = _to_abs_path(filename)
-    content = file_get_decorated_content(filename, start_line, end_line)
-    message = f"Content of {filename} from line {start_line} to {end_line}:\n{content}"
-
-    logger.info(message)
-
-    return message
+# Confirmation functions
 
 
 def confirm_location(locations: List[str], root_cause: str) -> str:
@@ -330,12 +314,20 @@ def confirm_location(locations: List[str], root_cause: str) -> str:
 validate_callback = None
 
 
+# Not tool
 def set_validate_callback(callback):
     global validate_callback
     validate_callback = callback
 
 
 patch_count = 0
+patch_output = PATCH_OUTPUT
+
+
+# Not tool
+def set_patch_output(output: str):
+    global patch_output
+    patch_output = output
 
 
 def confirm_patch(patch: dict) -> str:
@@ -346,7 +338,7 @@ def confirm_patch(patch: dict) -> str:
 
     logger.info(f"CALL> confirm_patch({patch})")
 
-    with open(PATCH_OUTPUT, "w") as f:
+    with open(patch_output, "w") as f:
         f.write(json.dumps(patch, indent=4))
 
     response = validate_callback()
@@ -358,7 +350,7 @@ def confirm_patch(patch: dict) -> str:
     patch_count += 1
     if patch_count >= 3:
         # fake a valid response
-        with open(PATCH_OUTPUT, "w") as f:
+        with open(patch_output, "w") as f:
             patch = {"failed": f"Failed to generate patch after {patch_count} times"}
             f.write(json.dumps(patch, indent=4))
         message = "Valid, respond with TERMINATE"
@@ -375,9 +367,12 @@ def confirm_patch(patch: dict) -> str:
 # These functions are not called by LLM.
 
 
+# Not tool
 def apply_patch():
-    with open(PATCH_OUTPUT, "r") as f:
+    with open(patch_output, "r") as f:
         patch = json.load(f)
+
+    logger.info(f"CALL> apply_patch({patch})")
 
     if not ("filename" in patch and "patch" in patch):
         return False, "Invalid patch format"
@@ -400,13 +395,16 @@ def apply_patch():
         editor_replace(filename, start, end, content)
     else:
         return False, "Invalid patch format"
-
+    
     return True, None
 
 
+# Not tool
 def undo_patch():
-    with open(PATCH_OUTPUT, "r") as f:
+    with open(patch_output, "r") as f:
         patch = json.load(f)
+
+    logger.info(f"CALL> undo_patch()")
 
     if not ("filename" in patch):
         return False, "Invalid patch format"
@@ -415,3 +413,32 @@ def undo_patch():
     editor_restore_file(filename)
 
     return True, None
+
+
+######################################################################
+# Miscellaneous functions
+def get_file_content(filename: str, start_line: int, end_line: int) -> str:
+    """
+    Get the content of a file from start_line to end_line (both inclusive).
+    It returns the content with decorated line number.
+    """
+    logger.info(f"CALL> get_file_content({filename}, {start_line}, {end_line})")
+    filename = str(filename)
+    start_line = int(start_line)
+    end_line = int(end_line)
+
+    filename = _to_abs_path(filename)
+    content = file_get_decorated_content(filename, start_line, end_line)
+    message = f"Content of {filename} from line {start_line} to {end_line}:\n{content}"
+
+    logger.info(message)
+
+    return message
+
+
+# Not tool
+def get_full_path(filename: str) -> str:
+    """
+    Get the full path of a file.
+    """
+    return _to_abs_path(filename)

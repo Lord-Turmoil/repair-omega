@@ -1,25 +1,20 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: run_fl.sh -p <profile> [-c <config>] [-d -k -b -n -t]"
+    echo "Usage: run_co.sh -p <profile> [-c <config>] [-k -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
     echo "  -c <config>  : specify the config file to use (default is config.yaml)"
-    echo "  -d           : dry run, will initialize sandbox"
     echo "  -k           : keep the log files"
-    echo "  -b           : build only"
-    echo "  -n           : no debug"
     echo "  -t           : auto terminate"
     exit 1
 }
 
-exe=src/fix_localization.py
+fl=scripts/run_fl.sh
+exe=src/chat_only.py
 
 profile="sample"
 config="config.yaml"
-dry=0
 keep=0
-build_only=0
-no_dbg=0
 auto=0
 while getopts "p:c:dkbnth" opt; do
     case ${opt} in
@@ -29,17 +24,8 @@ while getopts "p:c:dkbnth" opt; do
         c )
             config=$OPTARG
             ;;
-        d )
-            dry=1
-            ;;
         k )
             keep=1
-            ;;
-        b )
-            build_only=1
-            ;;
-        n )
-            no_dbg=1
             ;;
         t )
             auto=1
@@ -58,22 +44,14 @@ if [ "$profile" == "sample" ]; then
 fi
 
 options="--config $config --profile $profile"
-if [ $dry -eq 1 ]; then
-    options="$options --dry"
-fi
 if [ $keep -eq 1 ]; then
     options="$options --keep"
 fi
-if [ $build_only -eq 1 ]; then
-    options="$options --build-only"
-fi
-if [ $no_dbg -eq 1 ]; then
-    options="$options --no-debug"
-fi
 
+bash $fl -p $profile -c $config -d -b -t
 if [ $auto -eq 1 ]; then
-   echo exit | python3 $exe $options
-   echo ""
+    echo exit | python3 $exe $options
+    echo ""
 else
     python3 $exe $options
 fi

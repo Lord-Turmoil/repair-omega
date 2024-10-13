@@ -1,5 +1,7 @@
 from autogen import ConversableAgent, register_function
+from consts import CO_OUTPUT, PATCH_OUTPUT
 from prompt import (
+    CO_SYSTEM,
     FL_SYSTEM_DBG,
     FL_SYSTEM_NO_DBG,
     PG_SYSTEM,
@@ -13,6 +15,7 @@ from functions import (
     print_value,
     run_program,
     run_to_line,
+    set_patch_output,
     summary,
     switch_frame,
 )
@@ -112,6 +115,8 @@ def agent_init_pg(llm_config):
         human_input_mode="TERMINATE",
     )
 
+    set_patch_output(PATCH_OUTPUT)
+
     # Register functions.
     register_function(
         get_file_content,
@@ -139,6 +144,34 @@ def agent_init_pg(llm_config):
         description="Get the body of the function in the given file",
     )
 
+    register_function(
+        confirm_patch,
+        caller=assistant,
+        executor=user_proxy,
+        description="Confirm the patch for the fix location",
+    )
+
+    return assistant, user_proxy, system_message
+
+
+def agent_init_co(llm_config):
+    system_message = CO_SYSTEM
+
+    # Initialize LLM agent and user proxy.
+    assistant = ConversableAgent(
+        name="Echo", system_message=system_message, llm_config=llm_config
+    )
+    user_proxy = ConversableAgent(
+        name="Chat Only Toolset",
+        llm_config=False,
+        is_termination_msg=lambda msg: msg.get("content") is not None
+        and "TERMINATE" in msg["content"],
+        human_input_mode="TERMINATE",
+    )
+
+    set_patch_output(CO_OUTPUT)
+
+    # Register functions.
     register_function(
         confirm_patch,
         caller=assistant,
