@@ -13,9 +13,9 @@ import json
 import logging
 import os
 import re
-import sys
 from typing import List
 from consts import LOCALIZATION_OUTPUT, PATCH_OUTPUT
+from prompt import FL_AFTER_RUN_TO_LINE
 from tools.tools import (
     editor_backup_file,
     editor_insert_after,
@@ -24,8 +24,8 @@ from tools.tools import (
     gdb_backtrace,
     gdb_frame,
     gdb_print,
-    gdb_restart,
-    gdb_start,
+    gdb_run,
+    gdb_run_to_line,
     lsp_get_function,
     lsp_get_symbol_definition,
     lsp_get_symbol_summary,
@@ -57,7 +57,13 @@ def _uri_to_path(uri):
 
 ######################################################################
 # GDB tool functions
-started = False
+
+expected_func = None
+
+
+def set_expected_function(function):
+    global expected_func
+    expected_func = function
 
 
 def run_program() -> str:
@@ -66,35 +72,28 @@ def run_program() -> str:
     If the program exited normally, return a good message.
     Otherwise, return formatted crash site and backtrace.
     """
-    global started
-
     logger.info("CALL> run_program")
 
-    if not started:
-        response = gdb_start()
-        started = True
-    else:
-        response = gdb_restart()
+    response = gdb_run()
 
     if "exited normally" in response:
         message = "[PASSED] Program exited normally."
         logger.info(message)
         return message
 
-    message = ""
-    if "Breakpoint" in response:
-        message += "Program stopped at breakpoint.\n"
-        message += "\n".join(response.split("\n")[-3:-1])
-    else:
-        message += "Program crashed with error.\n"
-        message += "\n".join(response.split("\n")[-3:-1])
-    message += f"\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
+    print(response)
+
+    message = "Program crashed with error.\n"
+    message += "\n".join(response.split("\n")[-3:-1])
+    message += f"\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>\n"
 
     backtrace = gdb_backtrace()
     # Hope this regex works.
     pattern = re.compile(
         r"#\s*(\d+)\s+0x[0-9a-fA-F]+\s+in\s+(\w+)\s*\(([^)]*)\)\s+at\s+(\S+):(\d+)"
     )
+
+    expected_frame = None
     for line in backtrace.split("\n"):
         matches = pattern.search(line)
         if matches is not None:
@@ -104,7 +103,25 @@ def run_program() -> str:
             filename = matches.group(4)
             line = matches.group(5)
             message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
+
+            if expected_func is not None and expected_func in function:
+                expected_frame = frame_number
+            elif expected_frame is None:
+                expected_frame = frame_number
+
+            if frame_number > 10:
+                message += "\nMore than 10 frames, stopping here."
     message += "\n"
+
+    if expected_frame is not None:
+        if expected_func is not None:
+            message += f"The program crashed in function `{expected_func}` at frame {expected_frame} at line given below.\n"
+        else:
+            message += f"The program crashed at frame {expected_frame}.\n"
+        old = logger.level
+        logger.setLevel(logging.CRITICAL)  # supress switch_frame log
+        message += switch_frame(expected_frame)
+        logger.setLevel(old)
 
     logger.info(message)
 
@@ -143,14 +160,57 @@ def switch_frame(frame: int) -> str:
     matches = pattern.search(frame)
     if matches is None:
         logger.error(f"Invalid frame: {frame}")
-        return "Invalid frame number."
+        return "Invalid frame number, please switch to another valid frame."
 
     function = matches.group(2)
     filename = _to_abs_path(matches.group(4))
     line = matches.group(5)
 
     message = f"Switched to frame {frame}, function {function} at {filename}:{line}.\n"
-    message += file_get_content(filename, int(line), int(line))
+    message += file_get_decorated_content(filename, int(line), int(line))
+
+    logger.info(message)
+
+    return message
+
+
+def run_to_line(filename: str, line: int) -> str:
+    """
+    Run the program to the given line by setting a breakpoint.
+    FIXME: A special case is recursive function, where this only stops at
+    the first call.
+    """
+    logger.info(f"CALL> run_to_line({filename}, {line})")
+
+    filename = str(filename)
+    line = int(line)
+
+    filename = _to_abs_path(filename)
+    response = gdb_run_to_line(filename, line)
+
+    if "Breakpoint" in response:
+        message = f"Program stopped at {filename}:{line}."
+        message += "\n".join(response.split("\n")[-3:-1])
+    else:
+        message = f"Program crashed before {filename}:{line}."
+        message += "\n".join(response.split("\n")[-3:-1])
+    message += "\n"
+    message += FL_AFTER_RUN_TO_LINE
+    message += "\n"
+    message += "Currently available stack frames:\n"
+    backtrace = gdb_backtrace()
+    pattern = re.compile(
+        r"#\s*(\d+)\s+0x[0-9a-fA-F]+\s+in\s+(\w+)\s*\(([^)]*)\)\s+at\s+(\S+):(\d+)"
+    )
+    for line in backtrace.split("\n"):
+        matches = pattern.search(line)
+        if matches is not None:
+            frame_number = matches.group(1)
+            function = matches.group(2)
+            args = matches.group(3)
+            filename = matches.group(4)
+            line = matches.group(5)
+            message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
 
     logger.info(message)
 
@@ -246,7 +306,7 @@ def confirm_location(locations: List[str], root_cause: str) -> str:
     """
     Confirm the locations of the bug.
     """
-    logger.info(f"CALL> confirm_location({locations})")
+    logger.info(f"CALL> confirm_location({locations}, {root_cause})")
 
     content = {"root_cause": root_cause, "locations": locations}
     with open(LOCALIZATION_OUTPUT, "w") as f:

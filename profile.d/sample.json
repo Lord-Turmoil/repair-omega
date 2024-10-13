@@ -14,5 +14,7 @@
     },
     "init": "init",
     "sandbox": "",
-    "work": ""
+    "work": "",
+    "constraint": "i is less than count",
+    "function": "sum"
 }

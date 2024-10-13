@@ -7,12 +7,17 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.FileHandler("gdb.log", "w"))
 
+debug = logging.getLogger("pygdbmi")
+debug.setLevel(logging.DEBUG)
+debug.addHandler(logging.FileHandler("pygdbmi.log", "w"))
 
 def _parse_gdb_output(output):
     response = ""
     for message in output:
         if message["type"] == "console":
             response += message["payload"]
+        debug.debug(message)
+        
     return response
 
 
@@ -33,14 +38,19 @@ class GdbWrapper:
         self._env = env
         self._cwd = cwd
 
+        self._running = False
+
     def _execute(self, cmd):
         logger.info(cmd)
-        output = _parse_gdb_output(self._controller.write(cmd))
+        output = _parse_gdb_output(self._controller.write(cmd, timeout_sec=5))
         logger.info(output)
         return output
 
     def start(self):
-        return self._execute(f"-file-exec-and-symbols {self._executable}")
+        return self._execute(f"file {self._executable}")
+
+    def is_running(self):
+        return self._running
 
     def run(self):
         self._execute(f"set cwd {self._cwd}")
@@ -49,6 +59,7 @@ class GdbWrapper:
         cmd = "run"
         for arg in self._args:
             cmd += f' "{arg}"'
+        self._running = True
         return self._execute(cmd)
 
     def backtrace(self):
@@ -60,7 +71,14 @@ class GdbWrapper:
     def print(self, expression):
         return self._execute(f"print {expression}")
 
+    def set_breakpoint(self, file, line):
+        return self._execute(f"break {file}:{line}")
+
+    def clear_breakpoints(self):
+        return self._execute("clear")
+
     def kill(self):
+        self._running = False
         return self._execute("kill")
 
     def exit(self):
@@ -88,6 +106,7 @@ class GdbWrapperFactory:
     def get(self):
         if self._instance is None:
             self._instance = self._create()
+            self._instance.start()
         return self._instance
 
     def respawn(self):

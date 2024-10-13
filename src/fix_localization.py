@@ -5,6 +5,7 @@ import shutil
 import subprocess
 from arguments import parse_args_fl
 from consts import LOCALIZATION_OUTPUT, LOCALIZATION_SNAPSHOT
+from functions import set_expected_function
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 from agent import agent_init_fl
@@ -49,7 +50,9 @@ def keep_log(profile):
     if not os.path.exists(f"log/{profile['profile']}"):
         os.makedirs(f"log/{profile['profile']}")
 
-    shutil.copyfile(LOCALIZATION_SNAPSHOT, f"log/{profile['profile']}/{LOCALIZATION_SNAPSHOT}")
+    shutil.copyfile(
+        LOCALIZATION_SNAPSHOT, f"log/{profile['profile']}/{LOCALIZATION_SNAPSHOT}"
+    )
     shutil.copyfile("fl.log", f"log/{profile['profile']}/fl.log")
     shutil.copyfile("function.log", f"log/{profile['profile']}/fl_function.log")
     shutil.copyfile("gdb.log", f"log/{profile['profile']}/gdb.log")
@@ -97,8 +100,11 @@ if __name__ == "__main__":
 
     logger.info("Initiating chat")
     initial = FL_INITIAL_MESSAGE
-    if profile["constraint"]:
+    assert profile["constraint"]
+    if profile["constraint"] is not None:
         initial += "\n" + FL_CONSTRAINT.format(profile["constraint"])
+    if profile["function"] is not None:
+        set_expected_function(profile["function"])
     chat_result = None
     try:
         chat_result = user_proxy.initiate_chat(

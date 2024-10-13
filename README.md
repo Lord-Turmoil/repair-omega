@@ -38,7 +38,8 @@ Every run is configured by a profile under `profile.d`. See `sample.json` for ex
     "sandbox": "",  // (optional) path to the sandbox directory (defualt is .sandbox)
     "work": "",     // (optional) path to the working directory (default is .work)
     "output": "",   // (optional) path to the output file (default is "locations.txt")
-    "constraint": "(And (Slt s spp) (Slt s 8))" // (optional) constraint for the fix location (default is None)
+    "constraint": "(And (Slt s spp) (Slt s 8))", // constraint for the fix location
+    "function": "sum" // crashed function name
 }
 ```
 

@@ -12,6 +12,7 @@ from functions import (
     get_file_content,
     print_value,
     run_program,
+    run_to_line,
     summary,
     switch_frame,
 )
@@ -54,11 +55,17 @@ def agent_init_fl(llm_config, enable_debug=True):
             executor=user_proxy,
             description="Print the value of an expression in the current context",
         )
+        # register_function(
+        #     switch_frame,
+        #     caller=assistant,
+        #     executor=user_proxy,
+        #     description="Switch to a different stack frame in the backtrace",
+        # )
         register_function(
-            switch_frame,
+            run_to_line,
             caller=assistant,
             executor=user_proxy,
-            description="Switch to a different stack frame in the backtrace",
+            description="Run the program in GDB until the specified line",
         )
 
     register_function(

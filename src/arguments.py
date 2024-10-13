@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import json
 import os
 import yaml
@@ -70,10 +71,15 @@ def load_profile(filename):
         profile["env"] = {}
     if not _contains(profile, "constraint"):
         profile["constraint"] = None
+    if not _contains(profile, "function"):
+        profile["function"] = None
 
     # add profile identifier
     if not _contains(profile, "profile"):
         profile["profile"] = os.path.splitext(os.path.basename(filename))[0]
+
+    # get current system time
+    profile["timestamp"] = str(datetime.datetime.now())
 
     return profile
 
@@ -131,11 +137,11 @@ def parse_args_fl():
     llm_config = load_config(args.config)
 
     profile["profile"] += f"-{llm_config['model']}"
-    if profile["constraint"]:
-        # make constraint to the end for sorting
-        if "-c" in profile["profile"]:
-            profile["profile"] = profile["profile"].replace("-c", "")
-        profile["profile"] += "-c"
+    if profile["constraint"] is None:
+        # make constraint tag to the end for sorting
+        if "-nc" in profile["profile"]:
+            profile["profile"] = profile["profile"].replace("-nc", "")
+        profile["profile"] += "-nc"
     if args.no_debug:
         profile["profile"] += "-nd"
 
@@ -183,11 +189,11 @@ def parse_args_pg():
     llm_config = load_config(args.config)
 
     profile["profile"] += f"-{llm_config['model']}"
-    if profile["constraint"]:
-        # make constraint to the end for sorting
-        if "-c" in profile["profile"]:
-            profile["profile"] = profile["profile"].replace("-c", "")
-        profile["profile"] += "-c"
+    if profile["constraint"] is None:
+        # make constraint tag to the end for sorting
+        if "-nc" in profile["profile"]:
+            profile["profile"] = profile["profile"].replace("-nc", "")
+        profile["profile"] += "-nc"
     if args.no_debug:
         profile["profile"] += "-nd"
 

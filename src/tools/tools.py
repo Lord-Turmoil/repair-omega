@@ -61,15 +61,10 @@ def lsp_get_function(filename, function):
 # GDB functions
 
 
-def gdb_start():
+def gdb_run():
     gdb = gdb_instance()
-    gdb.start()
-    return gdb.run()
-
-
-def gdb_restart():
-    gdb = gdb_instance()
-    gdb.kill()
+    if gdb.is_running():
+        gdb.kill()
     return gdb.run()
 
 
@@ -79,6 +74,18 @@ def gdb_backtrace():
 
 def gdb_frame(frame):
     return gdb_instance().frame(frame)
+
+
+def gdb_run_to_line(file, line):
+    gdb = gdb_instance()
+    if gdb.is_running():
+        gdb.kill()
+
+    gdb.set_breakpoint(file, line)
+    response = gdb.run()
+    gdb.clear_breakpoints()
+
+    return response
 
 
 def gdb_print(expression):
