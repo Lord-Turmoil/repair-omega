@@ -59,6 +59,9 @@ fi
 
 echo -e "\033[36mOptions: $options\033[0m"
 
+echo -e "\033[33mCleansing previous logs...\033[0m"
+rm -rf *.log *.json
+
 echo -e "\033[36mRunning Fix Localization\033[0m"
 bash $fl $options -d
 if [ $? -ne 0 ]; then

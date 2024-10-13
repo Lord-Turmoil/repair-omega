@@ -64,8 +64,8 @@ def validate(profile):
             result = f"The program still crashes: {result}"
             logger.error(result)
     else:
-        result = f"Patch is syntactically invalid: {result}"
-        logger.error(result)
+        result = f"Patch is syntactically invalid"
+        logger.error(f"{result}: {message}")
 
     status, message = undo_patch()
     if not status:

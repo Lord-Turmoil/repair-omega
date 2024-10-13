@@ -1,6 +1,7 @@
 import logging
 from arguments import parse_args_validate
 from functions import run_program
+from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 import subprocess
 
@@ -62,11 +63,14 @@ if __name__ == "__main__":
         profile["env"],
         profile["work"],
     )
+    logger.info("Initializing LSP")
+    lsp_init(cwd=profile["sandbox"])
+
     message = validate(profile)
     if message is None:
         logger.info("Patch is valid")
     else:
         logger.error(f"Patch is invalid: {message}")
 
-    # Terminate GDB
     gdb_exit()
+    lsp_exit()

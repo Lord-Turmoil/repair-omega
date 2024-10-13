@@ -7,17 +7,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.FileHandler("gdb.log", "w"))
 
-debug = logging.getLogger("pygdbmi")
-debug.setLevel(logging.DEBUG)
-debug.addHandler(logging.FileHandler("pygdbmi.log", "w"))
 
 def _parse_gdb_output(output):
     response = ""
     for message in output:
         if message["type"] == "console":
             response += message["payload"]
-        debug.debug(message)
-        
+
     return response
 
 

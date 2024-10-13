@@ -363,6 +363,7 @@ def confirm_patch(patch: dict) -> str:
             f.write(json.dumps(patch, indent=4))
         message = "Valid, respond with TERMINATE"
         logger.info(message)
+        return message
 
     message = f"The patch is not valid, please generate another patch. The reason is that: {response}"
     logger.info(message)
