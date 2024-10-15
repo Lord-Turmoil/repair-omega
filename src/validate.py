@@ -1,6 +1,6 @@
 import logging
 from arguments import parse_args_validate
-from functions import run_program
+from functions import run_program, set_run_mode
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 import subprocess
@@ -67,6 +67,8 @@ if __name__ == "__main__":
     )
     logger.info("Initializing LSP")
     lsp_init(cwd=profile["sandbox"])
+
+    set_run_mode(profile["mode"])
 
     message = validate(profile)
     if message is None:

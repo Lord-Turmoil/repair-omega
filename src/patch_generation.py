@@ -20,6 +20,10 @@ coloredlogs.install(level="DEBUG", logger=logger)
 
 
 def load_locations(profile):
+    if not os.path.exists(PATCH_INPUT):
+        logger.error("No fix locations provided")
+        exit(1)
+
     with open(PATCH_INPUT, "r") as f:
         locations = json.load(f)
     return locations

@@ -15,6 +15,12 @@ import os
 import re
 from typing import List
 from consts import LOCALIZATION_OUTPUT, PATCH_OUTPUT
+from tools.function_impl import (
+    _extract_undefined_sanitizer_error,
+    extract_sanitizer_error,
+    parse_stackframe,
+    to_abs_path,
+)
 from prompt import FL_AFTER_RUN_TO_LINE
 from tools.tools import (
     editor_backup_file,
@@ -32,7 +38,7 @@ from tools.tools import (
     lsp_get_symbol_summary,
 )
 from tools.file_utils import file_get_decorated_content
-from tools.lsp_integration import lsp_to_abs_path, uri_to_path
+from tools.lsp_integration import uri_to_path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -43,25 +49,6 @@ logger.addHandler(logging.FileHandler("function.log", mode="w"))
 # Help functions (not called by LLM)
 
 
-def _to_abs_path(filename):
-    """
-    Convert a relative path to an absolute path. It is used by LSP functions to
-    convert the relative file path in GDB to an absolute path in LSP working
-    directory.
-    """
-    path, cwd = lsp_to_abs_path(filename)
-    if os.path.exists(path):
-        return path
-    basename = os.path.basename(filename)
-    # search for the file under cwd
-    for root, _, files in os.walk(cwd):
-        if basename in files:
-            return os.path.join(root, basename)
-    # failed to find the file
-    logger.error(f"File {filename} not found under {cwd}")
-    return filename
-
-
 def _uri_to_path(uri):
     return uri_to_path(uri)
 
@@ -70,39 +57,6 @@ def _uri_to_path(uri):
 # GDB tool functions
 
 expected_func = None
-
-
-def _parse_stackframe(frame):
-    pattern_1 = re.compile(
-        r"#\s*(\d+)\s+0x[0-9a-fA-F]+\s+in\s+(\w+)\s*\(([^)]*)\)\s+at\s+(\S+):(\d+)"
-    )
-    pattern_2 = re.compile(r"#(\d+)\s+(\w+)\s*\((.*?)\)\s+at\s+([\w\.\-]+):(\d+)")
-
-    matches = pattern_1.search(frame)
-    if matches is None:
-        matches = pattern_2.search(frame)
-    if matches is None:
-        return None, None, None, None, None
-    frame_number = matches.group(1)
-    function = matches.group(2)
-    args = matches.group(3)
-    filename = matches.group(4)
-    line = matches.group(5)
-    return int(frame_number), function, args, filename, int(line)
-
-
-def _parse_sanitizer_stackframe(frame):
-    pattern = re.compile(
-        r"#(\d+)\s+(0x[0-9a-fA-F]+)\s+in\s+(\w+)\s+([\w/.\-]+):(\d+):(\d+)"
-    )
-    matches = pattern.search(frame)
-    if matches is None:
-        return None, None, None, None
-    frame_number = matches.group(1)
-    function = matches.group(3)
-    filename = matches.group(4)
-    line = matches.group(5)
-    return int(frame_number), function, filename, int(line)
 
 
 # Not tool
@@ -128,12 +82,12 @@ def _run_gdb():
 
     message = "Program crashed with error.\n"
     message += "\n".join(response.split("\n")[-3:-1])
-    message += f"\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>\n"
+    message += f"\n\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
 
     backtrace = gdb_backtrace()
     expected_frame = None
     for trace in backtrace.split("\n"):
-        frame_number, function, args, filename, line = _parse_stackframe(trace)
+        frame_number, function, args, filename, line = parse_stackframe(trace)
         if frame_number is None:
             continue
         message += f"\n#{frame_number} in {function} ({args}) at {filename}:{line}"
@@ -173,66 +127,30 @@ def _run_sanitizer():
         logger.info(message)
         return message
 
-    message = "Program crashed due to sanitizer error.\n"
+    message = "Program crashed due to sanitizer error:\n"
 
-    # Example of the response:
-    """
-    ==7556==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60200000005a at pc 0x000000496e72 bp 0x7ffd2e33f870 sp 0x7ffd2e33f038
-WRITE of size 11 at 0x60200000005a thread T0
-    #0 0x496e71 in __asan_memmove (/home/tonix/buaa/repair/omega/omega/.sandbox/test.out+0x496e71)
-    #1 0x4cb31b in CWE122_Heap_Based_Buffer_Overflow__c_CWE193_char_memmove_15_bad /home/tonix/buaa/repair/omega/omega/.sandbox/CWE122_Heap_Based_Buffer_Overflow__c_CWE193_char_memmove_15.c:48:9
-    #2 0x4cb43a in main /home/tonix/buaa/repair/omega/omega/.sandbox/CWE122_Heap_Based_Buffer_Overflow__c_CWE193_char_memmove_15.c:139:5
-    #3 0x7faf01c27082 in __libc_start_main /build/glibc-LcI20x/glibc-2.31/csu/../csu/libc-start.c:308:16
-    #4 0x41c35d in _start (/home/tonix/buaa/repair/omega/omega/.sandbox/test.out+0x41c35d)
-    """
-    # find the first error
-    pos = response.find("==ERROR")
-    if pos == -1:
-        message = "Sanitizer error message not found."
-        logger.error(message)
+    expected_filename, expected_line, sanitizer_message = extract_sanitizer_error(
+        logger, response, expected_func
+    )
+
+    message += sanitizer_message
+
+    if expected_filename is None:
         return message
 
-    # find the first frame
-    pos = response.find("#0", pos)
-    if pos == -1:
-        message = "Sanitizer frame not found."
-        logger.error(message)
-        return message
-
-    message += f"The stack trace is as follows with format #<frame number> in <function> at <file>:<line>\n"
-    backtrace = response[pos:].split("\n")
-    expected_frame = None
-    expected_filename = None
-    expected_line = None
-    for trace in backtrace:
-        if trace == "":
-            # error will end with an empty line
-            break
-        frame_number, function, filename, line = _parse_sanitizer_stackframe(trace)
-        if frame_number is None:
-            continue
-        message += f"\n#{frame_number} in {function} at {filename}:{line}"
-        if expected_func is not None and expected_func in function:
-            expected_frame = frame_number
-            expected_filename = filename
-            expected_line = line
-        elif expected_frame is None:
-            expected_frame = frame_number
-            expected_filename = filename
-            expected_line = line
-        if frame_number > 20:
-            message += "\nMore than 20 frames, stopping here."
+    message += sanitizer_message
     message += "\n"
 
-    if expected_frame is not None:
-        if expected_func is not None:
-            message += f"The program crashed in function `{expected_func}` at frame {expected_frame} at the file and line given below.\n"
-        else:
-            message += f"The program crashed at frame {expected_frame}.\n"
-        old = logger.level
-        logger.setLevel(logging.CRITICAL)  # supress switch_frame log
-        message += run_to_line(expected_filename, expected_line)
-        logger.setLevel(old)
+    if expected_filename is None:
+        logger.error(sanitizer_message)
+        return message
+
+    message += f"The program crashed in function `{expected_func}` at the file and line given below.\n"
+
+    old = logger.level
+    logger.setLevel(logging.CRITICAL)  # supress switch_frame log
+    message += run_to_line(expected_filename, expected_line)
+    logger.setLevel(old)
 
     logger.info(message)
 
@@ -257,15 +175,15 @@ def run_program() -> str:
     return run_program_impl()
 
 
-def print_value(expression: str) -> str:
+def print_value(value: str) -> str:
     """
-    Print the value of an expression in the current context.
+    Print the value of an variable in the current context.
     """
-    logger.info(f"CALL> print_value({expression})")
+    logger.info(f"CALL> print_value({value})")
 
-    expression = str(expression)
+    value = str(value)
 
-    response = gdb_print(expression)
+    response = gdb_print(value)
     # TODO: handle error response
 
     logger.info(response)
@@ -292,7 +210,7 @@ def switch_frame(frame: int) -> str:
         return "Invalid frame number, please switch to another valid frame."
 
     function = matches.group(2)
-    filename = _to_abs_path(matches.group(4))
+    filename = to_abs_path(logger, matches.group(4))
     line = matches.group(5)
 
     message = f"Switched to frame {frame}, function {function} at {filename}:{line}.\n"
@@ -314,11 +232,11 @@ def run_to_line(filename: str, line: int) -> str:
     filename = str(filename)
     line = int(line)
 
-    filename = _to_abs_path(filename)
+    filename = to_abs_path(logger, filename)
     response = gdb_run_to_line(filename, line)
 
     if "Breakpoint" in response:
-        message = f"Program stopped at {filename}:{line}."
+        message = f"Program stopped at {filename}:{line}.\n"
         message += "\n".join(response.split("\n")[-3:-1])
     else:
         message = f"Program crashed before {filename}:{line}."
@@ -353,7 +271,7 @@ def definition(filename: str, line: int, symbol: str) -> str:
     line = int(line)
     symbol = str(symbol)
 
-    filename = _to_abs_path(filename)
+    filename = to_abs_path(logger, filename)
     definition = lsp_get_symbol_definition(filename, line, symbol)
     if definition == "":
         definition = f"Symbol {symbol} not found in {filename} around line {line}."
@@ -374,7 +292,7 @@ def summary(filename: str, line: int, symbol: str) -> str:
     line = int(line)
     symbol = str(symbol)
 
-    filename = _to_abs_path(filename)
+    filename = to_abs_path(logger, filename)
     summary = lsp_get_symbol_summary(filename, line, symbol)
     if summary == "":
         summary = f"Symbol {symbol} not found in {filename} around line {line}."
@@ -392,7 +310,7 @@ def function_body(filename: str, function: str) -> str:
     filename = str(filename)
     function = str(function)
 
-    filename = _to_abs_path(filename)
+    filename = to_abs_path(logger, filename)
     body = lsp_get_function(filename, function)
     if body == "":
         body = f"Function {function} not found in {filename}."
@@ -460,7 +378,7 @@ def confirm_patch(patch: dict) -> str:
         return message
 
     patch_count += 1
-    if patch_count >= 3:
+    if patch_count >= 5:
         # fake a valid response
         with open(patch_output, "w") as f:
             patch = {"failed": f"Failed to generate patch after {patch_count} times"}
@@ -489,7 +407,7 @@ def apply_patch():
     if not ("filename" in patch and "patch" in patch):
         return False, "Invalid patch format"
 
-    filename = _to_abs_path(patch["filename"])
+    filename = to_abs_path(logger, patch["filename"])
     content = patch["patch"]
 
     if not os.path.exists(filename):
@@ -521,7 +439,7 @@ def undo_patch():
     if not ("filename" in patch):
         return False, "Invalid patch format"
 
-    filename = _to_abs_path(patch["filename"])
+    filename = to_abs_path(logger, patch["filename"])
     editor_restore_file(filename)
 
     return True, None
@@ -539,7 +457,7 @@ def get_file_content(filename: str, start_line: int, end_line: int) -> str:
     start_line = int(start_line)
     end_line = int(end_line)
 
-    filename = _to_abs_path(filename)
+    filename = to_abs_path(logger, filename)
     content = file_get_decorated_content(filename, start_line, end_line)
     message = f"Content of {filename} from line {start_line} to {end_line}:\n{content}"
 
@@ -553,4 +471,4 @@ def get_full_path(filename: str) -> str:
     """
     Get the full path of a file.
     """
-    return _to_abs_path(filename)
+    return to_abs_path(logger, filename)

@@ -64,7 +64,7 @@ def agent_init_fl(llm_config, profile):
             print_value,
             caller=assistant,
             executor=user_proxy,
-            description="Print the value of an expression in the current context",
+            description="Print the value of an variable or array element in the current context",
         )
         # register_function(
         #     switch_frame,

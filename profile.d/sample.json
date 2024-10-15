@@ -12,6 +12,7 @@
         "ENV1": "value1",
         "ENV2": "value2"
     },
+    "mode": "gdb",
     "init": "init",
     "sandbox": "",
     "work": "",

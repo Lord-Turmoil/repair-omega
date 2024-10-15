@@ -34,6 +34,7 @@ Every run is configured by a profile under `profile.d`. See `sample.json` for ex
         "ENV1": "value1",
         "ENV2": "value2"
     },
+    "mode": "gdb",  // (optional) run program with gdb or sanitizer (default is "gdb")
     "init": "init", // (optional) path to the test case directory (default is None)
     "sandbox": "",  // (optional) path to the sandbox directory (defualt is .sandbox)
     "work": "",     // (optional) path to the working directory (default is .work)

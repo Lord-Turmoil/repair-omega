@@ -75,9 +75,14 @@ class GdbWrapper:
             stderr=subprocess.PIPE,
         )
         err_output = process.stderr.decode("utf-8")
+        logger.info(err_output)
         if process.returncode == 0:
             return "Program exited normally"
-        if process.returncode == 134 or "ERROR" in err_output:
+        if (
+            process.returncode == 134
+            or "ERROR" in err_output
+            or "runtime error" in err_output
+        ):
             return err_output
         return "Program exited normally, but with non-zero exit code"
 
