@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Run:
+#   Build project with dry run
+#   Chat only fix
+#   Patch validation
+
 function usage {
     echo "Usage: run_co.sh -p <profile> [-c <config>] [-k -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
@@ -10,6 +15,7 @@ function usage {
 }
 
 fl=scripts/run_fl.sh
+vd=scripts/run_vd.sh
 exe=src/chat_only.py
 
 profile="sample"
@@ -54,4 +60,11 @@ if [ $auto -eq 1 ]; then
     echo ""
 else
     python3 $exe $options
+fi
+
+echo -e "\033[36mRunning Validation\033[0m"
+bash $vd $options
+if [ $? -ne 0 ]; then
+    echo -e "\033[31mValidation failed\033[0m"
+    exit 1
 fi

@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Run:
+#   Fix localization
+#   Patch generation
+#   Patch validation
+
 function usage {
     echo "Usage: run.sh -p <profile> [-c <config>] [-k -n -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
