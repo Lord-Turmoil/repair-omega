@@ -5,17 +5,17 @@ import shutil
 import subprocess
 from arguments import parse_args_fl
 from consts import LOCALIZATION_OUTPUT, LOCALIZATION_SNAPSHOT
-from functions import set_expected_function
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 from agent import agent_init_fl
 from prompt import FL_CONSTRAINT, FL_INITIAL_MESSAGE
+import coloredlogs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.addHandler(logging.FileHandler("fl.log", "w"))
-
+coloredlogs.install(level="DEBUG", logger=logger)
 
 def prepare_sandbox(profile):
     if os.path.exists(profile["sandbox"]):
@@ -96,15 +96,14 @@ if __name__ == "__main__":
     lsp_init(cwd=profile["sandbox"])
 
     logger.info("Initializing agent")
-    assistant, user_proxy, system_message = agent_init_fl(llm_config, profile["debug"])
+    assistant, user_proxy, system_message = agent_init_fl(llm_config, profile)
 
     logger.info("Initiating chat")
     initial = FL_INITIAL_MESSAGE
-    assert profile["constraint"]
+    # assert profile["constraint"]
     if profile["constraint"] is not None:
         initial += "\n" + FL_CONSTRAINT.format(profile["constraint"])
-    if profile["function"] is not None:
-        set_expected_function(profile["function"])
+
     chat_result = None
     try:
         chat_result = user_proxy.initiate_chat(

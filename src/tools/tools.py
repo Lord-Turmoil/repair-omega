@@ -68,6 +68,10 @@ def gdb_run():
     return gdb.run()
 
 
+def gdb_run_sanitizer():
+    return gdb_instance().run_sanitizer()
+
+
 def gdb_backtrace():
     return gdb_instance().backtrace()
 

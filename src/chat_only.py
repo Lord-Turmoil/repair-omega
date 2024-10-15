@@ -10,11 +10,13 @@ from tools.lsp_integration import lsp_exit, lsp_init
 from agent import agent_init_co
 import shutil
 from prompt import CO_CONSTRAINT, CO_INITIAL_MESSAGE
+import coloredlogs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.addHandler(logging.FileHandler("co.log", "w"))
+coloredlogs.install(level="DEBUG", logger=logger)
 
 
 def keep_log(profile):
@@ -45,7 +47,7 @@ if __name__ == "__main__":
     lsp_init(cwd=profile["sandbox"])
 
     logger.info("Initializing agent")
-    assistant, user_proxy, system_message = agent_init_co(llm_config)
+    assistant, user_proxy, system_message = agent_init_co(llm_config, profile)
 
     assert profile["file"]
     assert profile["function"]

@@ -74,6 +74,9 @@ def load_profile(filename):
     if not _contains(profile, "function"):
         profile["function"] = None
 
+    if not _contains(profile, "mode"):
+        profile["mode"] = "gdb"
+
     # add profile identifier
     if not _contains(profile, "profile"):
         profile["profile"] = os.path.splitext(os.path.basename(filename))[0]

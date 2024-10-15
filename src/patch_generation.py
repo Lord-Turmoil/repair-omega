@@ -10,11 +10,13 @@ from agent import agent_init_pg
 import shutil
 import subprocess
 from prompt import PG_CONSTRAINT, PG_INITIAL_MESSAGE
+import coloredlogs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.addHandler(logging.FileHandler("pg.log", "w"))
+coloredlogs.install(level="DEBUG", logger=logger)
 
 
 def load_locations(profile):
@@ -106,7 +108,7 @@ if __name__ == "__main__":
     lsp_init(cwd=profile["sandbox"])
 
     logger.info("Initializing agent")
-    assistant, user_proxy, system_message = agent_init_pg(llm_config)
+    assistant, user_proxy, system_message = agent_init_pg(llm_config, profile)
 
     logger.info("Initiating chat")
     initial = PG_INITIAL_MESSAGE.format(locations["root_cause"])

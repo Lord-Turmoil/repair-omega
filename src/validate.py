@@ -4,11 +4,13 @@ from functions import run_program
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 import subprocess
+import coloredlogs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.addHandler(logging.FileHandler("validate.log", "w"))
+coloredlogs.install(level="DEBUG", logger=logger)
 
 
 def test_build(profile):

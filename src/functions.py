@@ -25,6 +25,7 @@ from tools.tools import (
     gdb_frame,
     gdb_print,
     gdb_run,
+    gdb_run_sanitizer,
     gdb_run_to_line,
     lsp_get_function,
     lsp_get_symbol_definition,
@@ -87,7 +88,21 @@ def _parse_stackframe(frame):
     args = matches.group(3)
     filename = matches.group(4)
     line = matches.group(5)
-    return frame_number, function, args, filename, line
+    return int(frame_number), function, args, filename, int(line)
+
+
+def _parse_sanitizer_stackframe(frame):
+    pattern = re.compile(
+        r"#(\d+)\s+(0x[0-9a-fA-F]+)\s+in\s+(\w+)\s+([\w/.\-]+):(\d+):(\d+)"
+    )
+    matches = pattern.search(frame)
+    if matches is None:
+        return None, None, None, None
+    frame_number = matches.group(1)
+    function = matches.group(3)
+    filename = matches.group(4)
+    line = matches.group(5)
+    return int(frame_number), function, filename, int(line)
 
 
 # Not tool
@@ -96,13 +111,13 @@ def set_expected_function(function):
     expected_func = function
 
 
-def run_program() -> str:
+def _run_gdb():
     """
     Run the program to be debugged.
     If the program exited normally, return a good message.
     Otherwise, return formatted crash site and backtrace.
     """
-    logger.info("CALL> run_program")
+    logger.info("CALL> run_program (GDB)")
 
     response = gdb_run()
 
@@ -126,7 +141,7 @@ def run_program() -> str:
             expected_frame = frame_number
         elif expected_frame is None:
             expected_frame = frame_number
-        if int(frame_number) > 20:
+        if frame_number > 20:
             message += "\nMore than 20 frames, stopping here."
     message += "\n"
 
@@ -143,6 +158,103 @@ def run_program() -> str:
     logger.info(message)
 
     return message
+
+
+def _run_sanitizer():
+    """
+    Run the program with sanitizer.
+    """
+    logger.info("CALL> run_program (Sanitizer)")
+
+    response = gdb_run_sanitizer()
+
+    if "exited normally" in response:
+        message = "[PASSED] Program exited normally."
+        logger.info(message)
+        return message
+
+    message = "Program crashed due to sanitizer error.\n"
+
+    # Example of the response:
+    """
+    ==7556==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x60200000005a at pc 0x000000496e72 bp 0x7ffd2e33f870 sp 0x7ffd2e33f038
+WRITE of size 11 at 0x60200000005a thread T0
+    #0 0x496e71 in __asan_memmove (/home/tonix/buaa/repair/omega/omega/.sandbox/test.out+0x496e71)
+    #1 0x4cb31b in CWE122_Heap_Based_Buffer_Overflow__c_CWE193_char_memmove_15_bad /home/tonix/buaa/repair/omega/omega/.sandbox/CWE122_Heap_Based_Buffer_Overflow__c_CWE193_char_memmove_15.c:48:9
+    #2 0x4cb43a in main /home/tonix/buaa/repair/omega/omega/.sandbox/CWE122_Heap_Based_Buffer_Overflow__c_CWE193_char_memmove_15.c:139:5
+    #3 0x7faf01c27082 in __libc_start_main /build/glibc-LcI20x/glibc-2.31/csu/../csu/libc-start.c:308:16
+    #4 0x41c35d in _start (/home/tonix/buaa/repair/omega/omega/.sandbox/test.out+0x41c35d)
+    """
+    # find the first error
+    pos = response.find("==ERROR")
+    if pos == -1:
+        message = "Sanitizer error message not found."
+        logger.error(message)
+        return message
+
+    # find the first frame
+    pos = response.find("#0", pos)
+    if pos == -1:
+        message = "Sanitizer frame not found."
+        logger.error(message)
+        return message
+
+    message += f"The stack trace is as follows with format #<frame number> in <function> at <file>:<line>\n"
+    backtrace = response[pos:].split("\n")
+    expected_frame = None
+    expected_filename = None
+    expected_line = None
+    for trace in backtrace:
+        if trace == "":
+            # error will end with an empty line
+            break
+        frame_number, function, filename, line = _parse_sanitizer_stackframe(trace)
+        if frame_number is None:
+            continue
+        message += f"\n#{frame_number} in {function} at {filename}:{line}"
+        if expected_func is not None and expected_func in function:
+            expected_frame = frame_number
+            expected_filename = filename
+            expected_line = line
+        elif expected_frame is None:
+            expected_frame = frame_number
+            expected_filename = filename
+            expected_line = line
+        if frame_number > 20:
+            message += "\nMore than 20 frames, stopping here."
+    message += "\n"
+
+    if expected_frame is not None:
+        if expected_func is not None:
+            message += f"The program crashed in function `{expected_func}` at frame {expected_frame} at the file and line given below.\n"
+        else:
+            message += f"The program crashed at frame {expected_frame}.\n"
+        old = logger.level
+        logger.setLevel(logging.CRITICAL)  # supress switch_frame log
+        message += run_to_line(expected_filename, expected_line)
+        logger.setLevel(old)
+
+    logger.info(message)
+
+    return message
+
+
+run_program_impl = _run_gdb
+
+
+# Not tool
+def set_run_mode(mode: str):
+    global run_program_impl
+    if mode.lower() == "gdb":
+        run_program_impl = _run_gdb
+    else:
+        logger.warning(f"Not running with gdb")
+        run_program_impl = _run_sanitizer
+
+
+def run_program() -> str:
+    # delegate to the selected implementation
+    return run_program_impl()
 
 
 def print_value(expression: str) -> str:
@@ -395,7 +507,7 @@ def apply_patch():
         editor_replace(filename, start, end, content)
     else:
         return False, "Invalid patch format"
-    
+
     return True, None
 
 

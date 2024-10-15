@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List
 from pygdbmi.gdbcontroller import GdbController
 import os
+import subprocess
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -57,6 +58,28 @@ class GdbWrapper:
             cmd += f' "{arg}"'
         self._running = True
         return self._execute(cmd)
+
+    def run_sanitizer(self):
+        """
+        Sanitizer does not work in GDB, so we provide this function to get the result
+        of the sanitizer. It does not invoke GDB, but runs the executable directly.
+        """
+        cmd = [self._executable]
+        for arg in self._args:
+            cmd.append(arg)
+        process = subprocess.run(
+            cmd,
+            cwd=self._cwd,
+            env=self._env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        err_output = process.stderr.decode("utf-8")
+        if process.returncode == 0:
+            return "Program exited normally"
+        if process.returncode == 134 or "ERROR" in err_output:
+            return err_output
+        return "Program exited normally, but with non-zero exit code"
 
     def backtrace(self):
         return self._execute("backtrace")

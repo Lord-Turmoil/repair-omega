@@ -11,9 +11,9 @@ function usage {
     exit 1
 }
 
-fl=run_fl.sh
-pg=run_pg.sh
-vd=run_vd.sh
+fl=scripts/run_fl.sh
+pg=scripts/run_pg.sh
+vd=scripts/run_vd.sh
 
 profile="sample"
 config="config.yaml"

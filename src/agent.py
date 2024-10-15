@@ -15,14 +15,16 @@ from functions import (
     print_value,
     run_program,
     run_to_line,
+    set_expected_function,
     set_patch_output,
+    set_run_mode,
     summary,
     switch_frame,
 )
 
 
-def agent_init_fl(llm_config, enable_debug=True):
-    system_message = FL_SYSTEM_DBG if enable_debug else FL_SYSTEM_NO_DBG
+def agent_init_fl(llm_config, profile):
+    system_message = FL_SYSTEM_DBG if profile["debug"] else FL_SYSTEM_NO_DBG
 
     # Initialize LLM agent and user proxy.
     assistant = ConversableAgent(
@@ -35,6 +37,9 @@ def agent_init_fl(llm_config, enable_debug=True):
         and "TERMINATE" in msg["content"],
         human_input_mode="TERMINATE",
     )
+
+    set_run_mode(profile["mode"])
+    set_expected_function(profile["function"])
 
     # Register functions.
     register_function(
@@ -51,7 +56,10 @@ def agent_init_fl(llm_config, enable_debug=True):
         description="Start debugging the given program in GDB and get the backtrace",
     )
 
-    if enable_debug:
+    # for now, force debug mode
+    assert profile["debug"]
+
+    if profile["debug"]:
         register_function(
             print_value,
             caller=assistant,
@@ -100,7 +108,7 @@ def agent_init_fl(llm_config, enable_debug=True):
     return assistant, user_proxy, system_message
 
 
-def agent_init_pg(llm_config):
+def agent_init_pg(llm_config, profile):
     system_message = PG_SYSTEM
 
     # Initialize LLM agent and user proxy.
@@ -115,6 +123,7 @@ def agent_init_pg(llm_config):
         human_input_mode="TERMINATE",
     )
 
+    set_run_mode(profile["mode"])
     set_patch_output(PATCH_OUTPUT)
 
     # Register functions.
@@ -154,7 +163,7 @@ def agent_init_pg(llm_config):
     return assistant, user_proxy, system_message
 
 
-def agent_init_co(llm_config):
+def agent_init_co(llm_config, profile):
     system_message = CO_SYSTEM
 
     # Initialize LLM agent and user proxy.
@@ -169,6 +178,7 @@ def agent_init_co(llm_config):
         human_input_mode="TERMINATE",
     )
 
+    set_run_mode(profile["mode"])
     set_patch_output(CO_OUTPUT)
 
     # Register functions.
