@@ -39,7 +39,7 @@ FL_SYSTEM_DBG = (
     # "You can only switch to the given stack frames, and the available stack frames may change after each `run_to_line`.\n"
     # <hr>
     "By analyzing the expected state and the real state of the program, you can identify the possible fix locations. "
-    "When you are confident with the fix location, call `confirm_location()` with the fix locations in the format of `(filename):(start line)-(end line)` in a list, and a sufficient summary of the root cause of the bug. "
+    "When you are confident with the fix location, call `confirm_location()` with the fix locations in the format of `(filename):(start line)-(end line)` in a list, and sufficient information for the root cause of the bug. "
     "(start line) and (end line) is the fix location instead of the crash location, and should comply with the root cause of the bug. "
     "It should cover slightly more lines to fix the bug, and even if start line and end line are the same, you should provide them all. "
     "In all steps above, you can use Language Server functions to access the source code to understand the context. "
@@ -123,6 +123,7 @@ PG_SYSTEM = (
     "```json"
     '{"filename": "<filename>", "line": <line>, "patch": "<patch>"}'
     "```\n"
+    "You must give the patch exactly as required in JSON format.\n"
     # <hr>
     'If confirmation is successful, you will receive a success message saying "Valid, respond with TERMINATE" and you should output TERMINATE in the next response to end this round. '
     "Otherwirse, it will return an error message, and you should provide another patch again.\n"

@@ -108,6 +108,9 @@ def _run_gdb():
         logger.setLevel(logging.CRITICAL)  # supress switch_frame log
         message += switch_frame(expected_frame)
         logger.setLevel(old)
+    else:
+        logger.error("No expected frame found.")
+        exit(101)
 
     logger.info(message)
 
@@ -199,20 +202,14 @@ def switch_frame(frame: int) -> str:
     response = gdb_frame(frame)
     frame = response.split("\n")[0]
 
-    pattern = re.compile(
-        r"#\s*(\d+)\s+0x[0-9a-fA-F]+\s+in\s+(\w+)\s*\(([^)]*)\)\s+at\s+(\S+):(\d+)"
-    )
-    matches = pattern.search(frame)
-    if matches is None:
+    frame_number, function, args, filename, line = parse_stackframe(frame)
+    if frame_number is None:
         logger.error(f"Invalid frame: {frame}")
         return "Invalid frame number, please switch to another valid frame."
-
-    function = matches.group(2)
-    filename = to_abs_path(logger, matches.group(4))
-    line = matches.group(5)
+    filename = to_abs_path(logger, filename)
 
     message = f"Switched to frame {frame}, function {function} at {filename}:{line}.\n"
-    message += file_get_decorated_content(filename, int(line), int(line))
+    message += file_get_decorated_content(filename, line, line)
 
     logger.info(message)
 

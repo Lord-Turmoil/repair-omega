@@ -25,7 +25,7 @@ if [ -z "$profiles" ]; then
     exit 1
 fi
 
-echo "=================== Overview ====================="
+echo "================ Overview ==============="
 if [ $chat_only -eq 1 ]; then
     exe=scripts/run_wrapper_co.sh
     echo -e "\033[33mRunning chat only\033[0m"
@@ -44,7 +44,7 @@ done
 echo -e "\033[34mTotal profiles: $total\033[0m"
 
 
-echo "==================== Running ====================="
+echo "================ Running ================"
 result_file="vd.log"
 index=0
 passed=0
@@ -75,7 +75,7 @@ for profile in $profiles; do
 done
 all_end=`date +%s`
 
-echo "==================== Summary ====================="
+echo "=============== Summary ================="
 passed_percent=$(echo "scale=2; $passed * 100 / $total" | bc)
 echo -e "\033[32m     Passed: $passed ($passed_percent%)\033[0m"
 echo -e "\033[31m     Failed: $failed\033[0m"

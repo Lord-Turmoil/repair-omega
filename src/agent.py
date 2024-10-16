@@ -31,7 +31,7 @@ def agent_init_fl(llm_config, profile):
         name="Crosshair", system_message=system_message, llm_config=llm_config
     )
     user_proxy = ConversableAgent(
-        name="Fix Localization Toolset",
+        name="Fix-Localization-Toolset",
         llm_config=False,
         is_termination_msg=lambda msg: msg.get("content") is not None
         and "TERMINATE" in msg["content"],
@@ -116,7 +116,7 @@ def agent_init_pg(llm_config, profile):
         name="Tech", system_message=system_message, llm_config=llm_config
     )
     user_proxy = ConversableAgent(
-        name="Patch Generation Toolset",
+        name="Patch-Generation-Toolset",
         llm_config=False,
         is_termination_msg=lambda msg: msg.get("content") is not None
         and "TERMINATE" in msg["content"],
@@ -172,7 +172,7 @@ def agent_init_co(llm_config, profile):
         name="Echo", system_message=system_message, llm_config=llm_config
     )
     user_proxy = ConversableAgent(
-        name="Chat Only Toolset",
+        name="Chat-Only-Toolset",
         llm_config=False,
         is_termination_msg=lambda msg: msg.get("content") is not None
         and "TERMINATE" in msg["content"],
