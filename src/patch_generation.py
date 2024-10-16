@@ -70,7 +70,7 @@ def validate(profile):
             result = f"The program still crashes: {result}"
             logger.error(result)
     else:
-        result = f"Patch is syntactically invalid"
+        result = f"Patch is syntactically invalid, please check brace matching and variable names"
         logger.error(f"{result}: {message}")
 
     status, message = undo_patch()
@@ -133,6 +133,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Chat terminated with exception: {e}")
     finally:
+        logger.info("Chat terminated")
         # keep the log even if the chat aborts
         chat_log = {"system": system_message}
         if chat_result:
@@ -151,9 +152,11 @@ if __name__ == "__main__":
         with open(PATCH_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))
 
-        if args.keep:
-            keep_log(profile)
-
     # Terminate GDB and LSP.
+    logger.info("Exiting GDB")
     gdb_exit()
+    logger.info("Exiting LSP")
     lsp_exit()
+
+    if args.keep:
+        keep_log(profile)

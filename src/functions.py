@@ -134,11 +134,9 @@ def _run_sanitizer():
     )
 
     message += sanitizer_message
-
     if expected_filename is None:
         return message
 
-    message += sanitizer_message
     message += "\n"
 
     if expected_filename is None:

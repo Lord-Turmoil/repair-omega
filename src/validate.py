@@ -81,5 +81,7 @@ if __name__ == "__main__":
     with open("vd.log", "w") as f:
         f.write(result)
 
+    logger.info("Exiting GDB")
     gdb_exit()
+    logger.info("Exiting LSP")
     lsp_exit()

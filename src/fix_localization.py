@@ -17,6 +17,7 @@ logger.addHandler(logging.StreamHandler())
 logger.addHandler(logging.FileHandler("fl.log", "w"))
 coloredlogs.install(level="DEBUG", logger=logger)
 
+
 def prepare_sandbox(profile):
     if os.path.exists(profile["sandbox"]):
         shutil.rmtree(profile["sandbox"])
@@ -113,6 +114,8 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Chat terminated with exception: {e}")
     finally:
+        logger.info("Chat terminated")
+
         # keep the log even if the chat aborts
         chat_log = {"system": system_message}
         if chat_result:
@@ -131,9 +134,11 @@ if __name__ == "__main__":
         with open(LOCALIZATION_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))
 
-        if args.keep:
-            keep_log(profile)
-
     # Terminate GDB and LSP.
+    logger.info("Exiting GDB")
     gdb_exit()
+    logger.info("Exiting LSP")
     lsp_exit()
+
+    if args.keep:
+        keep_log(profile)

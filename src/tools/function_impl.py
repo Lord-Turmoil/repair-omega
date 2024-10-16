@@ -74,7 +74,7 @@ def _extract_address_sanitizer_error(logger, response, expected_func):
     if pos1 == -1:
         pos1 = response.find("==WARNING: MemorySanitizer:")
     if pos1 == -1:
-        message = "Sanitizer error message not found."
+        message = "AddressSanitizer error message not found."
         logger.error(message)
         return None, None, message
 
@@ -123,7 +123,9 @@ def _extract_undefined_sanitizer_error(logger, response, expected_func):
         )
         if expected_filename is not None:
             return expected_filename, expected_line, message
-    return None, None, None
+    message = "UndefinedSanitizer error message not found."
+    logger.error(message)
+    return None, None, message
 
 
 def extract_sanitizer_error(logger, response, expected_func):

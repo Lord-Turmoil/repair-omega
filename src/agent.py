@@ -125,6 +125,7 @@ def agent_init_pg(llm_config, profile):
 
     set_run_mode(profile["mode"])
     set_patch_output(PATCH_OUTPUT)
+    set_expected_function(profile["function"])
 
     # Register functions.
     register_function(
@@ -180,6 +181,7 @@ def agent_init_co(llm_config, profile):
 
     set_run_mode(profile["mode"])
     set_patch_output(CO_OUTPUT)
+    set_expected_function(profile["function"])
 
     # Register functions.
     register_function(
