@@ -54,7 +54,15 @@ if [ $keep -eq 1 ]; then
     options="$options --keep"
 fi
 
+echo -e "\033[36mOptions: $options\033[0m"
+
+echo -e "\033[33mCleansing previous logs...\033[0m"
+rm -rf *.log *.json
+
+echo -e "\033[36mPreparing sandbox\033[0m"
 bash $fl -p $profile -c $config -d -b -t
+
+echo -e "\033[36mRunning Patch Generation (Chat Only)\033[0m"
 if [ $auto -eq 1 ]; then
     echo exit | python3 $exe $options
     echo ""
@@ -63,7 +71,7 @@ else
 fi
 
 echo -e "\033[36mRunning Validation\033[0m"
-bash $vd $options
+bash $vd -p $profile
 if [ $? -ne 0 ]; then
     echo -e "\033[31mValidation failed\033[0m"
     exit 1

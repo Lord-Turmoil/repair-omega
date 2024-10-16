@@ -90,8 +90,10 @@ if __name__ == "__main__":
         with open(CO_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))
 
-        if args.keep:
-            keep_log(profile)
-
+    logger.info("Exiting GDB")
     gdb_exit()
+    logger.info("Exiting LSP")
     lsp_exit()
+
+    if args.keep:
+        keep_log(profile)

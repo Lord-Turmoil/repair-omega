@@ -83,6 +83,7 @@ FL_CONSTRAINT = "You should pay attention to this constraint on related variable
 FL_AFTER_RUN_TO_LINE = (
     "Think of the constraint and expected state of the program here based on the constraint at other lines. "
     "Compare it with the real state of the program to get more comprehensive understanding of the bug. "
+    "Also pay attention to the control and data flow from here to the crash location. "
 )
 
 ######################################################################
