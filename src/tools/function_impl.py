@@ -70,7 +70,9 @@ def _parse_undefined_sanitizer_stackframe(frame):
 
 def _extract_address_sanitizer_error(logger, response, expected_func):
     # find the first error
-    pos1 = response.find("==ERROR")
+    pos1 = response.find("==ERROR: AddressSanitizer:")
+    if pos1 == -1:
+        pos1 = response.find("==WARNING: MemorySanitizer:")
     if pos1 == -1:
         message = "Sanitizer error message not found."
         logger.error(message)

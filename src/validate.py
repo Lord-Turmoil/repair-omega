@@ -71,10 +71,15 @@ if __name__ == "__main__":
     set_run_mode(profile["mode"])
 
     message = validate(profile)
+    result = ""
     if message is None:
         logger.info("Patch is valid")
+        result = "valid"
     else:
         logger.error(f"Patch is invalid: {message}")
+        result = "invalid"
+    with open("vd.log", "w") as f:
+        f.write(result)
 
     gdb_exit()
     lsp_exit()

@@ -80,7 +80,8 @@ class GdbWrapper:
             return "Program exited normally"
         if (
             process.returncode == 134
-            or "ERROR" in err_output
+            or "ERROR: AddressSanitizer" in err_output
+            or "WARNING: MemorySanitizer" in err_output
             or "runtime error" in err_output
         ):
             return err_output
