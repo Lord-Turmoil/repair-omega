@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: run_v.sh -p <profile>"
+    echo "Usage: $0 -p <profile>"
     echo "  -p <profile> : specify the profile to run (default is sample)"
     exit 1
 }

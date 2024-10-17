@@ -12,11 +12,9 @@
 import json
 import logging
 import os
-import re
 from typing import List
 from consts import LOCALIZATION_OUTPUT, PATCH_OUTPUT
 from tools.function_impl import (
-    _extract_undefined_sanitizer_error,
     extract_sanitizer_error,
     parse_stackframe,
     to_abs_path,
@@ -117,6 +115,11 @@ def _run_gdb():
     return message
 
 
+# To record the crash site
+san_crashed_file = None
+san_crashed_line = None
+
+
 def _run_sanitizer():
     """
     Run the program with sanitizer.
@@ -145,6 +148,10 @@ def _run_sanitizer():
     if expected_filename is None:
         logger.error(sanitizer_message)
         return message
+    
+    global san_crashed_file, san_crashed_line
+    san_crashed_file = to_abs_path(logger, expected_filename)
+    san_crashed_line = expected_line
 
     message += f"The program crashed in function `{expected_func}` at the file and line given below.\n"
 
@@ -228,7 +235,11 @@ def run_to_line(filename: str, line: int) -> str:
     line = int(line)
 
     filename = to_abs_path(logger, filename)
-    response = gdb_run_to_line(filename, line)
+    if filename == san_crashed_file:
+        to_line = san_crashed_line
+    else:
+        to_line = None
+    response = gdb_run_to_line(filename, line, to_line)
 
     if "Breakpoint" in response:
         message = f"Program stopped at {filename}:{line}.\n"
@@ -236,7 +247,7 @@ def run_to_line(filename: str, line: int) -> str:
     else:
         message = f"Program crashed before {filename}:{line}."
         message += "\n".join(response.split("\n")[-3:-1])
-    message += "\n"
+    message += "\n\n"
     message += FL_AFTER_RUN_TO_LINE
     # message += "\n"
     # message += "Currently available stack frames:\n"
@@ -268,9 +279,6 @@ def definition(filename: str, line: int, symbol: str) -> str:
 
     filename = to_abs_path(logger, filename)
     definition = lsp_get_symbol_definition(filename, line, symbol)
-    if definition == "":
-        definition = f"Symbol {symbol} not found in {filename} around line {line}."
-    # TODO: handle definition not found
 
     logger.info(definition)
 

@@ -128,8 +128,8 @@ if __name__ == "__main__":
         snapshot["dialog"] = chat_log
 
         with open(LOCALIZATION_OUTPUT, "r") as f:
-            locations = f.read().split("\n")
-        snapshot["locations"] = [line for line in locations if line.strip() != ""]
+            locations = json.load(f)
+        snapshot["locations"] = locations
 
         with open(LOCALIZATION_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))

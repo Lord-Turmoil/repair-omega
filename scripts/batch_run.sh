@@ -27,7 +27,7 @@ fi
 
 echo "================ Overview ==============="
 if [ $chat_only -eq 1 ]; then
-    exe=scripts/run_wrapper_co.sh
+    exe=scripts/run_co_wrapper.sh
     echo -e "\033[33mRunning chat only\033[0m"
 else
     exe=scripts/run_wrapper.sh

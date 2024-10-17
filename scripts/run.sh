@@ -6,7 +6,7 @@
 #   Patch validation
 
 function usage {
-    echo "Usage: run.sh -p <profile> [-c <config>] [-k -n -t]"
+    echo "Usage: $0 -p <profile> [-c <config>] [-k -n -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
     echo "  -c <config>  : specify the config file to use (default is config.yaml)"
     echo "  -d           : dry run, will initialize sandbox"
@@ -16,9 +16,9 @@ function usage {
     exit 1
 }
 
-fl=scripts/run_fl.sh
-pg=scripts/run_pg.sh
-vd=scripts/run_vd.sh
+fl=bin/run_fl.sh
+pg=bin/run_pg.sh
+vd=bin/run_vd.sh
 
 profile="sample"
 config="config.yaml"

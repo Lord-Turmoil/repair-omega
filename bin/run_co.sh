@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Run:
-#   Build project with dry run
-#   Chat only fix
-#   Patch validation
-
 function usage {
     echo "Usage: $0 -p <profile> [-c <config>] [-k -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
@@ -14,9 +9,7 @@ function usage {
     exit 1
 }
 
-fl=bin/run_fl.sh
-vd=bin/run_vd.sh
-exe=bin/run_co.sh
+exe=src/chat_only.py
 
 profile="sample"
 config="config.yaml"
@@ -49,32 +42,14 @@ if [ "$profile" == "sample" ]; then
     echo -e "\033[33mWarning: using sample profile\033[0m"
 fi
 
-options="-c $config -p $profile"
+options="--config $config --profile $profile"
 if [ $keep -eq 1 ]; then
-    options="$options -k"
+    options="$options --keep"
 fi
+
 if [ $auto -eq 1 ]; then
-    options="$options -t"
-fi
-
-echo -e "\033[36mOptions: $options\033[0m"
-
-echo -e "\033[33mCleansing previous logs...\033[0m"
-rm -rf *.log *.json
-
-echo -e "\033[36mPreparing sandbox\033[0m"
-bash $fl -p $profile -c $config -d -b -t
-
-echo -e "\033[36mRunning Patch Generation (Chat Only)\033[0m"
-bash $exe $options
-if [ $? -ne 0 ]; then
-    echo -e "\033[31mPatch Generation failed\033[0m"
-    exit 1
-fi
-
-echo -e "\033[36mRunning Validation\033[0m"
-bash $vd -p $profile
-if [ $? -ne 0 ]; then
-    echo -e "\033[31mValidation failed\033[0m"
-    exit 1
+    echo exit | python3 $exe $options
+    echo ""
+else
+    python3 $exe $options
 fi

@@ -5,6 +5,9 @@ from tools.lsp_integration import lsp_instance, uri_to_path
 ######################################################################
 # LSP functions
 
+# range around the line to search for the symbol
+FUZZY_RANGE = 5
+
 
 def lsp_get_symbol_definition(filename, line, symbol):
     """
@@ -12,16 +15,18 @@ def lsp_get_symbol_definition(filename, line, symbol):
     Will perform a fuzzy search around the line.
     """
     lsp = lsp_instance()
-    content = file_get_content(filename, line - 3, line + 3)
-    for i, line in enumerate(content.split("\n"), max(1, line - 3)):
+    content = file_get_content(filename, line - FUZZY_RANGE, line + FUZZY_RANGE + 1)
+    for i, line in enumerate(content.split("\n"), max(1, line - FUZZY_RANGE)):
         pos = line.find(symbol)
         if pos != -1:
             response = lsp.definition(filename, i, pos + 1)
+            if response is None:
+                return f"Definition of {symbol} not available in {filename} around line {line}."
             file = uri_to_path(response["uri"])
             start_line = response["range"]["start"]["line"] + 1
             end_line = response["range"]["end"]["line"] + 1
             return file_get_decorated_content(file, start_line, end_line)
-    return ""
+    return f"Symbol {symbol} not found in {filename} around line {line}."
 
 
 def lsp_get_symbol_summary(filename, line, symbol):
@@ -30,13 +35,15 @@ def lsp_get_symbol_summary(filename, line, symbol):
     Will perform a fuzzy search around the line.
     """
     lsp = lsp_instance()
-    content = file_get_content(filename, line - 3, line + 3)
-    for i, line in enumerate(content.split("\n"), max(1, line - 3)):
+    content = file_get_content(filename, line - FUZZY_RANGE, line + FUZZY_RANGE + 1)
+    for i, line in enumerate(content.split("\n"), max(1, line - FUZZY_RANGE)):
         pos = line.find(symbol)
         if pos != -1:
             response = lsp.summary(filename, i, pos + 1)
+            if response is None:
+                return f"Summary of {symbol} not available in {filename} around line {line}."
             return response["contents"]["value"]
-    return ""
+    return f"Symbol {symbol} not found in {filename} around line {line}."
 
 
 def lsp_get_function(filename, function):
@@ -80,12 +87,19 @@ def gdb_frame(frame):
     return gdb_instance().frame(frame)
 
 
-def gdb_run_to_line(file, line):
+def gdb_run_to_line(file, line, to_line=None):
+    """
+    In case the line is not reachable, specify to_line to add breakpoints
+    to every line from line to to_line.
+    """
     gdb = gdb_instance()
     if gdb.is_running():
         gdb.kill()
 
     gdb.set_breakpoint(file, line)
+    if to_line is not None:
+        for i in range(line + 1, to_line + 1):
+            gdb.set_breakpoint(file, i)
     response = gdb.run()
     gdb.clear_breakpoints()
 

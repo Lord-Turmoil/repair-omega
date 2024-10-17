@@ -30,6 +30,7 @@ FL_SYSTEM_DBG = (
     "If the program does not crash, call `confirm_location()` with two None arguments and stop. "
     "Otherwise, go to the next step.\n"
     "2. Call `run_to_line` to get the real state of the program at a specified line in the current stack frame before crash. "
+    "The line should be chosen based on the control and data flow from the crash location, usually at branches or loops. "
     "You don't need to call it at the crash location, but call it backwards from the crash location to get the expected state of the program. "
     "After each call to `run_to_line`, synthesize the constraint and expected state of the program here based on the constraint at other lines and output a summary. "
     "Then call `print_value` one or more times to inspect the related variables and compare it with the expected state. "
