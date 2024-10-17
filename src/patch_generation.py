@@ -26,6 +26,11 @@ def load_locations(profile):
 
     with open(PATCH_INPUT, "r") as f:
         locations = json.load(f)
+
+    if locations["root_cause"] is None:
+        logger.error("No need for patching")
+        exit(0)
+
     return locations
 
 
