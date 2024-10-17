@@ -205,6 +205,62 @@ def parse_args_pg():
     return args, profile, llm_config
 
 
+def parse_args_co():
+    parser = argparse.ArgumentParser(
+        prog="Echo",
+        description="Patch Generation (Chat Only)",
+        epilog="Enjoy the program! :)",
+    )
+    parser.add_argument(
+        "-c", "--config", type=str, default="config.yaml", help="Configuration file"
+    )
+    parser.add_argument(
+        "-p",
+        "--profile",
+        type=str,
+        required=True,
+        help="Project profile",
+    )
+    # to make the log profile compatible with fix localization
+    parser.add_argument(
+        "--no-debug",
+        action="store_true",
+        required=False,
+        default=False,
+        help="No debugging",
+    )
+    parser.add_argument(
+        "-k",
+        "--keep",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Keep the log after execution",
+    )
+
+    args = parser.parse_args()
+
+    profile = load_profile(args.profile)
+    llm_config = load_config(args.config)
+
+    profile["profile"] += f"-{llm_config['model']}"
+
+    # Disable constraint for chat only
+    profile["constraint"] = None
+
+    if profile["constraint"] is None:
+        # make constraint tag to the end for sorting
+        if "-nc" in profile["profile"]:
+            profile["profile"] = profile["profile"].replace("-nc", "")
+        profile["profile"] += "-nc"
+    if args.no_debug:
+        profile["profile"] += "-nd"
+
+    profile["debug"] = not args.no_debug
+
+    return args, profile, llm_config
+
+
 def parse_args_validate():
     parser = argparse.ArgumentParser(
         prog="Hunter",

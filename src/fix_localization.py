@@ -5,6 +5,7 @@ import shutil
 import subprocess
 from arguments import parse_args_fl
 from consts import LOCALIZATION_OUTPUT, LOCALIZATION_SNAPSHOT
+from tools.utils import copy_dir_content, ensure_empty_dir
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 from agent import agent_init_fl
@@ -19,19 +20,14 @@ coloredlogs.install(level="DEBUG", logger=logger)
 
 
 def prepare_sandbox(profile):
-    if os.path.exists(profile["sandbox"]):
-        shutil.rmtree(profile["sandbox"])
-    shutil.copytree(profile["project"], profile["sandbox"])
+    ensure_empty_dir(profile["sandbox"])
+    copy_dir_content(profile["project"], profile["sandbox"])
 
 
 def prepare_work(profile):
-    if os.path.exists(profile["work"]):
-        shutil.rmtree(profile["work"])
-    os.makedirs(profile["work"])
+    ensure_empty_dir(profile["work"])
     if profile["init"]:
-        for root, _, files in os.walk(profile["init"]):
-            for file in files:
-                shutil.copy2(os.path.join(root, file), profile["work"])
+        copy_dir_content(profile["init"], profile["work"])
 
 
 def build_project(profile):

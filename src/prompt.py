@@ -114,15 +114,16 @@ PG_SYSTEM = (
     "And if the express can be simplified, you should simplify it. "
     # <hr>
     "If the patch is modification, provide the filename, modified range and patch in the following format, so that the patch can be done by simply replacing lines from start to end. "
-    "The patch must exactly replace the lines from start to end, and comply to the whole program. "
+    "The patch must exactly replace the lines from start to end, and the old lines from start to end (both inclusive) will be replaced by the patch. "
+    "You may need to add braces or preserve multiline statements to make sure the patch is syntactically correct. "
     "If necessary, you can extend the modified range to cover more lines. "
     "The format of this case is as follows:\n"
     "```json"
-    '{"filename": "<filename>", "start": <start line>, "end": <end line>, "patch": "<patch>"}'
+    '{"patch": {"filename": "<filename>", "start": <start line>, "end": <end line>, "patch": "<patch>"} }'
     "```\n"
     "If it only involves addition, provide the filename, insertion line and patch in the following format, so that the patch can be done by inserting the patch right after the specified line:\n"
     "```json"
-    '{"filename": "<filename>", "line": <line>, "patch": "<patch>"}'
+    '{"patch": {"filename": "<filename>", "line": <line>, "patch": "<patch>"} }'
     "```\n"
     "You must give the patch exactly as required in JSON format.\n"
     # <hr>

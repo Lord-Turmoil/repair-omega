@@ -43,10 +43,15 @@ def parse_stackframe(frame):
 
 
 def _parse_address_sanitizer_stackframe(frame):
-    pattern = re.compile(
+    pattern_1 = re.compile(
         r"#(\d+)\s+(0x[0-9a-fA-F]+)\s+in\s+(\w+)\s+([\w/.\-]+):(\d+):(\d+)"
     )
-    matches = pattern.search(frame)
+    pattern_2 = re.compile(
+        r"#(\d+)\s+(0x[0-9a-fA-F]+)\s+in\s+(\w+)\s+([\w/.\-]+):(\d+)"
+    )
+    matches = pattern_1.search(frame)
+    if matches is None:
+        matches = pattern_2.search(frame)
     if matches is None:
         return None, None, None, None
     frame_number = matches.group(1)

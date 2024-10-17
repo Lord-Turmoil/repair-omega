@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from arguments import parse_args_pg
+from arguments import parse_args_co
 from consts import CO_OUTPUT, CO_SNAPSHOT
 from functions import function_body, get_full_path, set_validate_callback
 from tools.gdb_integration import gdb_exit, gdb_init
@@ -30,7 +30,7 @@ def keep_log(profile):
 
 
 if __name__ == "__main__":
-    args, profile, llm_config = parse_args_pg()
+    args, profile, llm_config = parse_args_co()
 
     # log of essential information
     snapshot = {"profile": profile}

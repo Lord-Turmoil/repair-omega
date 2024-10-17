@@ -79,7 +79,7 @@ def _run_gdb():
         return message
 
     message = "Program crashed with error.\n"
-    message += "\n".join(response.split("\n")[-3:-1])
+    message += "\n".join(response.split("\n")[-4:-1])
     message += f"\n\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
 
     backtrace = gdb_backtrace()
