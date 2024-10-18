@@ -44,8 +44,9 @@ FL_SYSTEM_DBG = (
     "By analyzing the expected state and the real state of the program, you can identify the possible fix locations. "
     "When you are confident with the fix location, call `confirm_location()` with the fix locations in the format of `(filename):(start line)-(end line)` in a list, and sufficient information for the root cause of the bug. "
     "(start line) and (end line) is the fix location instead of the crash location, and should comply with the root cause of the bug. "
+    "To avoid syntax error, (start line) to (end line) should be a valid range of code that can be modified or added, e.g. containing paired braces. "
     "It can cover slightly more lines to fix the bug, and even if start line and end line are the same, you should provide them all. "
-    "You can give multiple fix locations in the same list if there are many possible locations to fix the crash. "
+    "You can give multiple fix locations in the same list if there are more than one location needed to fix the crash. "
     "The root cause should include sufficient information to explain why the bug occurs, and why the fix location can resolve the bug. "
     "In all steps above, you can use Language Server functions to access the source code to understand the context. "
     "Calling `run_to_line` will change the available stackframes, if you want to get all crash stackframes, you should call `run_program` again. "
@@ -84,6 +85,10 @@ FL_SYSTEM_NO_DBG = (
 FL_INITIAL_MESSAGE = "Use the functions provided to analyze the crash in the program and give possible fix locations."
 
 FL_CONSTRAINT = "You should pay attention to this constraint on related variables: {}"
+
+FL_IGNORE_LOCATIONS = (
+    "The following locations are invalid for fixing the bug, please ignore them:\n{}"
+)
 
 FL_AFTER_RUN_TO_LINE = (
     "Think of the constraint and expected state of the program here based on the constraint at other lines. "
@@ -137,7 +142,7 @@ PG_SYSTEM = (
 
 PG_INITIAL_MESSAGE = (
     "The root cause of the bug is summarized as follows: {}\n"
-    "And the possible fix locations are provided as follows in the format of <filename>:<start line>-<end line>\n"
+    "And the possible fix locations are provided as follows in the format of <filename>:<start line>-<end line>:\n{}"
 )
 
 PG_CONSTRAINT = "You should pay attention to this constraint on related variables: {}"

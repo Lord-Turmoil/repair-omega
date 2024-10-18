@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -9,7 +10,7 @@ from tools.utils import copy_dir_content, ensure_empty_dir
 from tools.lsp_integration import lsp_exit, lsp_init
 from tools.gdb_integration import gdb_exit, gdb_init
 from agent import agent_init_fl
-from prompt import FL_CONSTRAINT, FL_INITIAL_MESSAGE
+from prompt import FL_CONSTRAINT, FL_IGNORE_LOCATIONS, FL_INITIAL_MESSAGE
 import coloredlogs
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,21 @@ def build_project(profile):
         exit(1)
 
 
+def load_locations(profile):
+    if not os.path.exists(LOCALIZATION_OUTPUT):
+        logger.error("No fix locations provided")
+        exit(1)
+
+    with open(LOCALIZATION_OUTPUT, "r") as f:
+        locations = json.load(f)
+
+    if locations["root_cause"] is None or len(locations["locations"]) == 0:
+        logger.error("No need for patching")
+        exit(0)
+
+    return locations
+
+
 def keep_log(profile):
     if not os.path.exists(f"log/{profile['profile']}"):
         os.makedirs(f"log/{profile['profile']}")
@@ -63,6 +79,11 @@ if __name__ == "__main__":
 
     # log of essential information
     snapshot = {"profile": profile}
+
+    locations = None
+    if profile["rerun"]:
+        logger.warning("Rerun requested")
+        locations = load_locations(profile)
 
     if args.dry:
         logger.info("Preparing sandbox for dry run")
@@ -100,6 +121,9 @@ if __name__ == "__main__":
     # assert profile["constraint"]
     if profile["constraint"] is not None:
         initial += "\n" + FL_CONSTRAINT.format(profile["constraint"])
+    if locations is not None:
+        ignored = "\n".join(locations["locations"])
+        initial += "\n" + FL_IGNORE_LOCATIONS.format(ignored)
 
     chat_result = None
     try:
@@ -127,6 +151,7 @@ if __name__ == "__main__":
             locations = json.load(f)
         snapshot["locations"] = locations
 
+        snapshot["finished"] = str(datetime.datetime.now())
         with open(LOCALIZATION_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))
 

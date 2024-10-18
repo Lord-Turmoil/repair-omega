@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -120,9 +121,9 @@ if __name__ == "__main__":
     assistant, user_proxy, system_message = agent_init_pg(llm_config, profile)
 
     logger.info("Initiating chat")
-    initial = PG_INITIAL_MESSAGE.format(locations["root_cause"])
-    for location in locations["locations"]:
-        initial += "\n" + location
+    initial = PG_INITIAL_MESSAGE.format(
+        locations["root_cause"], "\n".join(locations["locations"])
+    )
     if profile["constraint"]:
         initial += "\n" + PG_CONSTRAINT.format(profile["constraint"])
 
@@ -154,6 +155,7 @@ if __name__ == "__main__":
             patch = f.read()
         snapshot["patch"] = json.loads(patch)
 
+        snapshot["finished"] = str(datetime.datetime.now())
         with open(PATCH_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))
 

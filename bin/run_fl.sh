@@ -1,13 +1,14 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: $0 -p <profile> [-c <config>] [-d -k -b -n -t]"
+    echo "Usage: $0 -p <profile> [-c <config>] [-d -k -b -n -r -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
     echo "  -c <config>  : specify the config file to use (default is config.yaml)"
     echo "  -d           : dry run, will initialize sandbox"
     echo "  -k           : keep the log files"
     echo "  -b           : build only"
     echo "  -n           : no debug"
+    echo "  -r           : rerun fix localization"
     echo "  -t           : auto terminate"
     exit 1
 }
@@ -20,8 +21,9 @@ dry=0
 keep=0
 build_only=0
 no_dbg=0
+rerun=0
 auto=0
-while getopts "p:c:dkbnth" opt; do
+while getopts "p:c:dkbnrth" opt; do
     case ${opt} in
         p )
             profile=$OPTARG
@@ -40,6 +42,9 @@ while getopts "p:c:dkbnth" opt; do
             ;;
         n )
             no_dbg=1
+            ;;
+        r )
+            rerun=1
             ;;
         t )
             auto=1
@@ -69,6 +74,9 @@ if [ $build_only -eq 1 ]; then
 fi
 if [ $no_dbg -eq 1 ]; then
     options="$options --no-debug"
+fi
+if [ $rerun -eq 1 ]; then
+    options="$options --rerun"
 fi
 
 if [ $auto -eq 1 ]; then

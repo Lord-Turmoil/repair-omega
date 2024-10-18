@@ -133,6 +133,13 @@ def parse_args_fl():
         default=False,
         help="Build only, used to test build process",
     )
+    parser.add_argument(
+        "--rerun",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Rerun the localization process",
+    )
 
     args = parser.parse_args()
 
@@ -147,6 +154,7 @@ def parse_args_fl():
         profile["profile"] += "-nc"
     if args.no_debug:
         profile["profile"] += "-nd"
+    profile["rerun"] = args.rerun
 
     profile["debug"] = not args.no_debug
 
