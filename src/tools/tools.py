@@ -1,49 +1,68 @@
 from tools.gdb_integration import gdb_instance
-from tools.file_utils import file_get_decorated_content, file_get_content
+from tools.file_utils import (
+    file_get_decorated_content,
+    file_get_content,
+    file_get_line_count,
+)
 from tools.lsp_integration import lsp_instance, uri_to_path
 
 ######################################################################
 # LSP functions
 
-# range around the line to search for the symbol
-FUZZY_RANGE = 5
+
+def _get_fuzzy_position(filename, lineno, symbol):
+    FUZZY_RANGE = 10
+    line_count = file_get_line_count(filename)
+
+    lines_to_search = [lineno]
+    for i in range(1, FUZZY_RANGE + 1):
+        if lineno - i > 0:
+            lines_to_search.append(lineno - i)
+        if lineno + i <= line_count:
+            lines_to_search.append(lineno + i)
+    for i in lines_to_search:
+        line = file_get_content(filename, i, i)
+        pos = line.find(symbol)
+        if pos != -1:
+            # replace tabs with spaces
+            char = pos + len(symbol) + 1
+            return i, char
+    return None, None
 
 
-def lsp_get_symbol_definition(filename, line, symbol):
+def lsp_get_symbol_definition(filename, lineno, symbol):
     """
     Get the definition of a symbol at a given position.
     Will perform a fuzzy search around the line.
     """
     lsp = lsp_instance()
-    content = file_get_content(filename, line - FUZZY_RANGE, line + FUZZY_RANGE + 1)
-    for i, line in enumerate(content.split("\n"), max(1, line - FUZZY_RANGE)):
-        pos = line.find(symbol)
-        if pos != -1:
-            response = lsp.definition(filename, i, pos + 1)
-            if response is None:
-                return f"Definition of {symbol} not available in {filename} around line {line}."
-            file = uri_to_path(response["uri"])
-            start_line = response["range"]["start"]["line"] + 1
-            end_line = response["range"]["end"]["line"] + 1
-            return file_get_decorated_content(file, start_line, end_line)
-    return f"Symbol {symbol} not found in {filename} around line {line}."
+    line, char = _get_fuzzy_position(filename, lineno, symbol)
+    if line is None:
+        return f"Symbol {symbol} not found in {filename} around line {lineno}."
+    response = lsp.definition(filename, line, char)
+    if response is None:
+        return (
+            f"Definition of {symbol} not available in {filename} around line {lineno}."
+        )
+    file = uri_to_path(response["uri"])
+    start_line = response["range"]["start"]["line"] + 1
+    end_line = response["range"]["end"]["line"] + 1
+    return file_get_decorated_content(file, start_line, end_line)
 
 
-def lsp_get_symbol_summary(filename, line, symbol):
+def lsp_get_symbol_summary(filename, lineno, symbol):
     """
     Get the hover information of a symbol at a given position.
     Will perform a fuzzy search around the line.
     """
     lsp = lsp_instance()
-    content = file_get_content(filename, line - FUZZY_RANGE, line + FUZZY_RANGE + 1)
-    for i, line in enumerate(content.split("\n"), max(1, line - FUZZY_RANGE)):
-        pos = line.find(symbol)
-        if pos != -1:
-            response = lsp.summary(filename, i, pos + 1)
-            if response is None:
-                return f"Summary of {symbol} not available in {filename} around line {line}."
-            return response["contents"]["value"]
-    return f"Symbol {symbol} not found in {filename} around line {line}."
+    line, char = _get_fuzzy_position(filename, lineno, symbol)
+    if line is None:
+        return f"Symbol {symbol} not found in {filename} around line {lineno}."
+    response = lsp.summary(filename, line, char)
+    if response is None:
+        return f"Summary of {symbol} not available in {filename} around line {lineno}."
+    return response["contents"]["value"]
 
 
 def lsp_get_function(filename, function):

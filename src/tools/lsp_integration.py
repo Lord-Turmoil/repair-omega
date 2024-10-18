@@ -12,6 +12,7 @@ def _to_lsp_request(id, method, params):
 
     content = json.dumps(request)
     header = f"Content-Length: {len(content)}\r\n\r\n"
+
     return (header + content).encode("utf-8")
 
 
@@ -81,10 +82,24 @@ class LspController:
 
     def initialize(self):
         self.id += 1
-        request = _to_lsp_request(self.id, "initialize", {"processId": os.getpid()})
+        request = _to_lsp_request(
+            self.id,
+            "initialize",
+            {
+                "processId": os.getpid(),
+                "rootUri": path_to_uri(self.cwd),
+            },
+        )
         self._process.stdin.write(request)
         self._process.stdin.flush()
         return _parse_lsp_response(self.id, self._process.stdout)
+
+    def initialized(self):
+        notification = _to_lsp_notification("initialized", {})
+        self._process.stdin.write(notification)
+        self._process.stdin.flush()
+
+        return None
 
     def didOpen(self, filename):
         """
@@ -226,6 +241,7 @@ class LspWrapper:
 
     def get_cwd(self):
         return self._cwd
+
 
 class LspWrapperFactory:
     def __init__(self, executable="clangd", cwd=os.getcwd()) -> None:

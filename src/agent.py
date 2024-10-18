@@ -83,13 +83,13 @@ def agent_init_fl(llm_config, profile):
         definition,
         caller=assistant,
         executor=user_proxy,
-        description="Get the definition of a symbol at a given position",
+        description="Get the definition of a symbol with filename, line number and symbol name",
     )
     register_function(
         summary,
         caller=assistant,
         executor=user_proxy,
-        description="Get the summary information of a symbol at a given position",
+        description="Get the summary information of a symbol with filename, line number and symbol name",
     )
     register_function(
         function_body,
@@ -139,13 +139,13 @@ def agent_init_pg(llm_config, profile):
         definition,
         caller=assistant,
         executor=user_proxy,
-        description="Get the definition of a symbol at a given position",
+        description="Get the definition of a symbol with filename, line number and symbol name",
     )
     register_function(
         summary,
         caller=assistant,
         executor=user_proxy,
-        description="Get the summary information of a symbol at a given position",
+        description="Get the summary information of a symbol with filename, line number and symbol name",
     )
     register_function(
         function_body,

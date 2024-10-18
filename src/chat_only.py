@@ -3,9 +3,15 @@ import logging
 import os
 from arguments import parse_args_co
 from consts import CO_OUTPUT, CO_SNAPSHOT
-from functions import function_body, get_full_path, set_validate_callback
+from functions import (
+    apply_patch,
+    function_body,
+    get_full_path,
+    set_validate_callback,
+    undo_patch,
+)
+from patch_generation import test_build, test_run
 from tools.gdb_integration import gdb_exit, gdb_init
-from patch_generation import validate
 from tools.lsp_integration import lsp_exit, lsp_init
 from agent import agent_init_co
 import shutil
@@ -17,6 +23,37 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 logger.addHandler(logging.FileHandler("co.log", "w"))
 coloredlogs.install(level="DEBUG", logger=logger)
+
+
+def validate_no_result(profile):
+    """
+    Validate the patch by building the project.
+    """
+    logger.info("Validating patch")
+
+    status, message = apply_patch()
+    if not status:
+        logger.error(f"Failed to apply patch: {message}")
+        return message
+
+    status, result = test_build(profile)
+    if status:
+        status, result = test_run(profile)
+        if status:
+            return None
+        else:
+            result = f"The program still crashes after the patch is applied"
+            logger.error(result)
+    else:
+        result = f"Patch is syntactically invalid, please check brace matching and variable names"
+        logger.error(f"{result}: {message}")
+
+    status, message = undo_patch()
+    if not status:
+        logger.error(f"Failed to undo patch: {message}")
+        return message
+
+    return result
 
 
 def keep_log(profile):
@@ -61,7 +98,7 @@ if __name__ == "__main__":
         initial += "\n" + CO_CONSTRAINT.format(profile["constraint"])
 
     # set validate callback
-    set_validate_callback(lambda: validate(profile))
+    set_validate_callback(lambda: validate_no_result(profile))
 
     chat_result = None
     try:

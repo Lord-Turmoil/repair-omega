@@ -1,3 +1,13 @@
+def file_get_line_count(filename: str):
+    """
+    Get the number of lines in a file.
+    Return -1 if the file does not exist.
+    """
+    with open(filename, "r") as f:
+        lines = f.readlines()
+    return len(lines)
+
+
 def file_get_content(filename: str, start_line: int, end_line: int):
     """
     Get the content of a file from start_line to end_line (both inclusive).

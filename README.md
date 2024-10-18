@@ -2,6 +2,28 @@
 
 ---
 
+## Pre-requisites
+
+In order to build subject projects, some tools are required.
+
+First, compilers are required to build the projects, and GDB is required to debug the projects. And ensure ASAN and UBSAN are installed.
+
+```bash
+sudo apt install gcc g++ clang gdb
+```
+
+To build projects, common build tools are required.
+
+```bash
+sudo apt install make cmake autoconf automake libtool pkg-config
+```
+
+To use LSP, clangd and bear are required. bear is used to generate compile_commands.json for clangd.
+
+```bash
+sudo apt install clangd bear
+```
+
 ## Quick Start
 
 > Run `pip install -r requirements.txt` to install the required packages.
