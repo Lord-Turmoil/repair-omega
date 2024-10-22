@@ -97,26 +97,36 @@ def _extract_address_sanitizer_error(logger, response, expected_func):
     expected_frame = None
     expected_filename = None
     expected_line = None
+    found = False
+    error_trace = ""
     for trace in backtrace:
         if trace == "":
-            # error will end with an empty line
+            if found:
+                break
+            # reset error_trace to look for the frame in the next trace
+            error_trace = ""
+            continue
+        if trace.startswith("SUMMARY:"):
+            # error ends when summary starts
             break
         frame_number, function, filename, line = _parse_address_sanitizer_stackframe(
             trace
         )
         if frame_number is None:
             continue
-        message += f"\n#{frame_number} in {function} at {filename}:{line}"
+        error_trace += f"\n#{frame_number} in {function} at {filename}:{line}"
         if expected_func is not None and expected_func in function:
             expected_frame = frame_number
             expected_filename = filename
             expected_line = line
+            found = True
         elif expected_frame is None:
             expected_frame = frame_number
             expected_filename = filename
             expected_line = line
         if frame_number > 20:
-            message += "\nMore than 20 frames, stopping here."
+            error_trace += "\nMore than 20 frames, stopping here."
+    message += error_trace
 
     return expected_filename, expected_line, message
 
