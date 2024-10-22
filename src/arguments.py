@@ -69,6 +69,16 @@ def load_profile(filename):
         profile["args"] = []
     if not _contains(profile, "env"):
         profile["env"] = {}
+    # special handling for LD_LIBRARY_PATH
+    for key, value in profile["env"].items():
+        if key == "LD_LIBRARY_PATH":
+            # we leave '.' as placeholder
+            ld_library_path = os.environ.get("LD_LIBRARY_PATH", ".")
+            ld_library_path = (
+                f"{ld_library_path}:{os.path.join(profile['sandbox'], value)}"
+            )
+            profile["env"][key] = ld_library_path
+
     if not _contains(profile, "constraint"):
         profile["constraint"] = None
     if not _contains(profile, "function"):
