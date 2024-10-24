@@ -32,6 +32,18 @@ def prepare_work(profile):
 
 
 def build_project(profile):
+    if profile["pre-build"] is not None:
+        pre_build = subprocess.run(
+            profile["pre-build"],
+            cwd=profile["sandbox"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        if pre_build.returncode != 0:
+            logger.error("Failed to pre-build project")
+            logger.error(pre_build.stderr.decode("utf-8"))
+            exit(1)
+
     build = subprocess.run(
         profile["build"],
         cwd=profile["sandbox"],

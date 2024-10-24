@@ -49,6 +49,9 @@ def load_profile(filename):
         if key not in profile:
             raise KeyError(f"Profile {filename} missing required key {key}")
 
+    if not _contains(profile, "pre-build"):
+        profile["pre-build"] = None
+
     profile["project"] = os.path.abspath(profile["project"])
 
     if not _contains(profile, "sandbox"):
@@ -69,15 +72,13 @@ def load_profile(filename):
         profile["args"] = []
     if not _contains(profile, "env"):
         profile["env"] = {}
-    # special handling for LD_LIBRARY_PATH
-    for key, value in profile["env"].items():
+    if not _contains(profile, "lib"):
+        profile["lib"] = {}
+    for key, value in profile["lib"].items():
         if key == "LD_LIBRARY_PATH":
-            # we leave '.' as placeholder
-            ld_library_path = os.environ.get("LD_LIBRARY_PATH", ".")
-            ld_library_path = (
-                f"{ld_library_path}:{os.path.join(profile['sandbox'], value)}"
-            )
-            profile["env"][key] = ld_library_path
+            profile["lib"][key] = os.path.join(profile["sandbox"], value)
+        # write linker options to env
+        profile["env"][key] = profile["lib"][key]
 
     if not _contains(profile, "constraint"):
         profile["constraint"] = None

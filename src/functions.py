@@ -245,7 +245,7 @@ def run_to_line(filename: str, line: int) -> str:
         message = f"Program stopped at {filename}:{line}.\n"
         message += "\n".join(response.split("\n")[-3:-1])
     else:
-        message = f"Program crashed before {filename}:{line}."
+        message = f"Program crashed before {filename}:{line}.\n"
         message += "\n".join(response.split("\n")[-3:-1])
     message += "\n\n"
     message += FL_AFTER_RUN_TO_LINE

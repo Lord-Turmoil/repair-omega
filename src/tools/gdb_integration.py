@@ -44,6 +44,11 @@ class GdbWrapper:
         return output
 
     def start(self):
+        # pre-configurations
+        self._execute("set pagination off")
+        self._execute("set confirm off")
+        self._execute("set breakpoint pending on")
+
         return self._execute(f"file {self._executable}")
 
     def is_running(self):

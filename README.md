@@ -24,6 +24,16 @@ To use LSP, clangd and bear are required. bear is used to generate compile_comma
 sudo apt install clangd bear
 ```
 
+Some other requirements.
+
+```bash
+sudo apt install nasm
+```
+
+```bash
+sudo apt install autopoint bison gperf texinfo
+```
+
 ## Quick Start
 
 > Run `pip install -r requirements.txt` to install the required packages.
