@@ -12,14 +12,14 @@
 import json
 import logging
 import os
+import subprocess
 from typing import List
-from consts import LOCALIZATION_OUTPUT, PATCH_OUTPUT
-from tools.function_impl import (
-    extract_sanitizer_error,
-    parse_stackframe,
-    to_abs_path,
-)
-from prompt import FL_AFTER_RUN_TO_LINE
+
+from agent.function_impl import extract_sanitizer_error, parse_stackframe, to_abs_path
+from shared.consts import LOCALIZATION_OUTPUT, PATCH_OUTPUT
+from shared.prompt import FL_AFTER_RUN_TO_LINE
+from tools.file_integration import file_get_decorated_content
+from tools.lsp_integration import uri_to_path
 from tools.tools import (
     editor_backup_file,
     editor_insert_after,
@@ -35,8 +35,6 @@ from tools.tools import (
     lsp_get_symbol_definition,
     lsp_get_symbol_summary,
 )
-from tools.file_utils import file_get_decorated_content
-from tools.lsp_integration import uri_to_path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -78,6 +76,11 @@ def _run_gdb():
         logger.info(message)
         return message
 
+    if "exited with code" in response:
+        message = "[REVIEW] Program exited with code."
+        logger.warning(message)
+        return message
+
     message = "Program crashed with error.\n"
     message += "\n".join(response.split("\n")[-4:-1])
     message += f"\n\nThe stack trace is as follows with format #<frame number> in <function> (<args>) at <file>:<line>"
@@ -108,7 +111,7 @@ def _run_gdb():
         logger.setLevel(old)
     else:
         logger.error("No expected frame found.")
-        exit(101)
+        message += "No expected frame found. Task failed, respond with TERMINATE."
 
     logger.info(message)
 
@@ -148,7 +151,7 @@ def _run_sanitizer():
     if expected_filename is None:
         logger.error(sanitizer_message)
         return message
-    
+
     global san_crashed_file, san_crashed_line
     san_crashed_file = to_abs_path(logger, expected_filename)
     san_crashed_line = expected_line
@@ -371,6 +374,10 @@ def confirm_patch(patch: dict) -> str:
 
     logger.info(f"CALL> confirm_patch({patch})")
 
+    for key, value in patch.items():
+        if key == "filename":
+            patch[key] = to_abs_path(logger, value)
+
     with open(patch_output, "w") as f:
         f.write(json.dumps(patch, indent=4))
 
@@ -392,6 +399,27 @@ def confirm_patch(patch: dict) -> str:
 
     message = f"The patch is not valid, please generate another patch. The reason is that: {response}"
     logger.info(message)
+    return message
+
+
+######################################################################
+# Miscellaneous functions
+def get_file_content(filename: str, start_line: int, end_line: int) -> str:
+    """
+    Get the content of a file from start_line to end_line (both inclusive).
+    It returns the content with decorated line number.
+    """
+    logger.info(f"CALL> get_file_content({filename}, {start_line}, {end_line})")
+    filename = str(filename)
+    start_line = int(start_line)
+    end_line = int(end_line)
+
+    filename = to_abs_path(logger, filename)
+    content = file_get_decorated_content(filename, start_line, end_line)
+    message = f"Content of {filename} from line {start_line} to {end_line}:\n{content}"
+
+    logger.info(message)
+
     return message
 
 
@@ -448,30 +476,102 @@ def undo_patch():
     return True, None
 
 
-######################################################################
-# Miscellaneous functions
-def get_file_content(filename: str, start_line: int, end_line: int) -> str:
-    """
-    Get the content of a file from start_line to end_line (both inclusive).
-    It returns the content with decorated line number.
-    """
-    logger.info(f"CALL> get_file_content({filename}, {start_line}, {end_line})")
-    filename = str(filename)
-    start_line = int(start_line)
-    end_line = int(end_line)
-
-    filename = to_abs_path(logger, filename)
-    content = file_get_decorated_content(filename, start_line, end_line)
-    message = f"Content of {filename} from line {start_line} to {end_line}:\n{content}"
-
-    logger.info(message)
-
-    return message
-
-
 # Not tool
 def get_full_path(filename: str) -> str:
     """
     Get the full path of a file.
     """
     return to_abs_path(logger, filename)
+
+
+######################################################################
+# Build functions (Not tool)
+
+
+def test_build(profile):
+    """
+    Test build the project to check syntax errors.
+    """
+    build = subprocess.run(
+        profile["build"],
+        cwd=profile["sandbox"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    if build.returncode == 0:
+        return True, ""
+    logger.error("Failed to build project")
+
+    return False, build.stderr.decode("utf-8")
+
+
+def test_run(profile):
+    """
+    Test run the project to check if the program can pass the POC.
+    """
+    result = run_program()
+    if "[PASSED]" in result:
+        return True, ""
+    return False, result
+
+
+def validate(app_logger, profile):
+    """
+    Validate the patch.
+    """
+    app_logger.info(f"Validating patch")
+
+    status, message = apply_patch()
+    if not status:
+        app_logger.error(f"Failed to apply patch: {message}")
+        return message
+
+    status, result = test_build(profile)
+    if status:
+        status, result = test_run(profile)
+        if status:
+            return None
+        else:
+            result = f"The program still crashes: {result}"
+            app_logger.error(result)
+    else:
+        result = f"Patch is syntactically invalid, please check brace matching and variable names"
+        app_logger.error(f"{result}: {message}")
+
+    status, message = undo_patch()
+    if not status:
+        app_logger.error(f"Failed to undo patch: {message}")
+        return message
+
+    return result
+
+
+def validate_no_result(app_logger, profile):
+    """
+    Validate the patch by building the project, but no results are returned.
+    """
+    app_logger.info("Validating patch")
+
+    status, message = apply_patch()
+    if not status:
+        app_logger.error(f"Failed to apply patch: {message}")
+        return message
+
+    status, result = test_build(profile)
+    if status:
+        status, result = test_run(profile)
+        if status:
+            return None
+        else:
+            result = f"The program still crashes after the patch is applied"
+            app_logger.error(result)
+    else:
+        result = f"Patch is syntactically invalid, please check brace matching and variable names"
+        app_logger.error(f"{result}: {message}")
+
+    status, message = undo_patch()
+    if not status:
+        app_logger.error(f"Failed to undo patch: {message}")
+        return message
+
+    return result

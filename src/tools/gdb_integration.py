@@ -1,8 +1,9 @@
 import logging
-from typing import Dict, List
-from pygdbmi.gdbcontroller import GdbController
 import os
 import subprocess
+from typing import Dict, List
+
+from pygdbmi.gdbcontroller import GdbController
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

@@ -12,3 +12,4 @@ echo ""
 
 echo "Batch run chat only"
 ./scripts/batch_run.sh -p $profiles -c
+

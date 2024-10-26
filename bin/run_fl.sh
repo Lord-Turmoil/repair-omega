@@ -1,85 +1,74 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: $0 -p <profile> [-c <config>] [-d -k -b -n -r -t]"
-    echo "  -p <profile> : specify the profile to run (default is sample)"
+    echo "Usage: $0 [-c <config>] -p <profile>  [-k -t -n]"
     echo "  -c <config>  : specify the config file to use (default is config.yaml)"
-    echo "  -d           : dry run, will initialize sandbox"
+    echo "  -p <profile> : specify the profile to run"
     echo "  -k           : keep the log files"
-    echo "  -b           : build only"
-    echo "  -n           : no debug"
-    echo "  -r           : rerun fix localization"
     echo "  -t           : auto terminate"
+    echo "  -n           : disable constraint"
+    echo "  -r           : rerun"
     exit 1
 }
 
 exe=src/fix_localization.py
+if [ ! -f $exe ]; then
+    echo "Error: $exe not found"
+    exit 1
+fi
 
-profile="sample"
-config="config.yaml"
-dry=0
-keep=0
-build_only=0
-no_dbg=0
-rerun=0
-auto=0
-while getopts "p:c:dkbnrth" opt; do
-    case ${opt} in
-        p )
-            profile=$OPTARG
+CONFIG="config.yaml"
+PROFILE=""
+KEEP=0
+AUTO_TERMINATE=0
+NO_CONSTRAINT=0
+RERUN=0
+while getopts "c:p:ktnrh" opt; do
+    case $opt in
+        c)
+            CONFIG=$OPTARG
             ;;
-        c )
-            config=$OPTARG
+        p)
+            PROFILE=$OPTARG
             ;;
-        d )
-            dry=1
+        k)
+            KEEP=1
             ;;
-        k )
-            keep=1
+        t)
+            AUTO_TERMINATE=1
             ;;
-        b )
-            build_only=1
-            ;;
-        n )
-            no_dbg=1
+        n)
+            NO_CONSTRAINT=1
             ;;
         r )
-            rerun=1
+            RERUN=1
             ;;
-        t )
-            auto=1
-            ;;
-        h )
+        h)
             usage
             ;;
-        \? )
+        * )
             # omit
             ;;
     esac
 done
 
-if [ "$profile" == "sample" ]; then
-    echo -e "\033[33mWarning: using sample profile\033[0m"
+if [ -z "$PROFILE" ]; then
+    usage
+    exit 1
 fi
 
-options="--config $config --profile $profile"
-if [ $dry -eq 1 ]; then
-    options="$options --dry"
-fi
-if [ $keep -eq 1 ]; then
+options="--config $CONFIG --profile $PROFILE"
+if [ $KEEP -eq 1 ]; then
     options="$options --keep"
 fi
-if [ $build_only -eq 1 ]; then
-    options="$options --build-only"
+if [ $NO_CONSTRAINT -eq 1 ]; then
+    options="$options --no-constraint"
 fi
-if [ $no_dbg -eq 1 ]; then
-    options="$options --no-debug"
-fi
-if [ $rerun -eq 1 ]; then
+if [ $RERUN -eq 1 ]; then
     options="$options --rerun"
 fi
 
-if [ $auto -eq 1 ]; then
+if [ $AUTO_TERMINATE -eq 1 ]; then
     echo exit | python3 $exe $options
     echo ""
 else

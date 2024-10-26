@@ -1,9 +1,9 @@
-from tools.gdb_integration import gdb_instance
-from tools.file_utils import (
-    file_get_decorated_content,
+from tools.file_integration import (
     file_get_content,
+    file_get_decorated_content,
     file_get_line_count,
 )
+from tools.gdb_integration import gdb_instance
 from tools.lsp_integration import lsp_instance, uri_to_path
 
 ######################################################################

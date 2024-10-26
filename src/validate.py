@@ -1,45 +1,22 @@
-import logging
-from arguments import parse_args_validate
-from functions import run_program, set_run_mode
-from tools.lsp_integration import lsp_exit, lsp_init
+import os
+import shutil
+
+from agent.functions import set_run_mode, test_build, test_run, validate
+from shared.arguments import parse_args_validate
+from shared.utils import get_logger
 from tools.gdb_integration import gdb_exit, gdb_init
-import subprocess
-import coloredlogs
+from tools.lsp_integration import lsp_exit, lsp_init
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
-logger.addHandler(logging.FileHandler("validate.log", "w"))
-coloredlogs.install(level="DEBUG", logger=logger)
+logger = get_logger(__name__, log_file="validate.log")
 
 
-def test_build(profile):
-    build = subprocess.run(
-        profile["build"],
-        cwd=profile["sandbox"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
-    if build.returncode == 0:
-        return True, ""
-    logger.error("Failed to build project")
-
-    return False, build.stderr.decode("utf-8")
+def keep_log(profile):
+    if not os.path.exists(f"log/{profile['profile']}"):
+        os.makedirs(f"log/{profile['profile']}")
+    shutil.copyfile("validate.log", f"log/{profile['profile']}/validate.log")
 
 
-def test_run(profile):
-    result = run_program()
-    if "[PASSED]" in result:
-        return True, ""
-    return False, result
-
-
-def validate(profile):
-    """
-    Validate the patch by building the project.
-    """
-    logger.info("Validating patch")
-
+def validate_patch(profile):
     status, result = test_build(profile)
     if status:
         status, result = test_run(profile)
@@ -50,9 +27,7 @@ def validate(profile):
             logger.error(result)
     else:
         result = f"Patch is syntactically invalid: {result}"
-        logger.error(result)
-
-    return result
+        logger.error(f"{result}: {message}")
 
 
 if __name__ == "__main__":
@@ -65,12 +40,13 @@ if __name__ == "__main__":
         profile["env"],
         profile["work"],
     )
+
     logger.info("Initializing LSP")
     lsp_init(cwd=profile["sandbox"])
 
     set_run_mode(profile["mode"])
 
-    message = validate(profile)
+    message = validate_patch(profile)
     result = ""
     if message is None:
         logger.info("Patch is valid")
@@ -78,10 +54,13 @@ if __name__ == "__main__":
     else:
         logger.error(f"Patch is invalid: {message}")
         result = "invalid"
-    with open("vd.log", "w") as f:
+    with open("validate.lock", "w") as f:
         f.write(result)
 
     logger.info("Exiting GDB")
     gdb_exit()
     logger.info("Exiting LSP")
     lsp_exit()
+
+    if args.keep:
+        keep_log(profile)

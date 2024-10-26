@@ -2,10 +2,21 @@ import argparse
 import datetime
 import json
 import os
+
 import yaml
 
 
-def load_config(filename="config.yaml"):
+def _contains(profile, key):
+    if not key in profile:
+        return False
+    if profile[key] is None:
+        return False
+    if isinstance(profile[key], str) and profile[key] == "":
+        return False
+    return True
+
+
+def _load_llm_config(filename="config.yaml"):
     config = {}
 
     entries = ["base_url", "api_key", "model", "price"]
@@ -25,17 +36,7 @@ def load_config(filename="config.yaml"):
     return config
 
 
-def _contains(profile, key):
-    if not key in profile:
-        return False
-    if profile[key] is None:
-        return False
-    if isinstance(profile[key], str) and profile[key] == "":
-        return False
-    return True
-
-
-def load_profile(filename):
+def _load_profile(filename):
     if not filename.endswith(".json"):
         filename += ".json"
     if not os.path.exists(filename):
@@ -98,14 +99,46 @@ def load_profile(filename):
     return profile
 
 
+def _parse_args(parser):
+    args = parser.parse_args()
+    args_dict = vars(args)
+
+    profile = _load_profile(args.profile)
+    llm_config = _load_llm_config(args.config)
+
+    if "no_constraint" in args_dict:
+        if args.no_constraint:
+            # force disable constraint
+            profile["constraint"] = None
+    if "rerun" in args_dict:
+        profile["rerun"] = args.rerun
+
+    profile["profile"] += f"-{llm_config['model']}"
+    if profile["constraint"] is None:
+        profile["profile"] += "-nc"
+
+    return args, profile, llm_config
+
+
 def parse_args_fl():
+    """
+    -c, --config: configuration file
+    -p, --profile: project profile
+    --keep: keep the log after execution
+    --no-constraint: disable constraint
+    """
     parser = argparse.ArgumentParser(
-        prog="Omega",
-        description="LLM with Debugger and Language Server",
+        prog="Fix Localization",
+        description="Perform fix localization",
         epilog="Enjoy the program! :)",
     )
     parser.add_argument(
-        "-c", "--config", type=str, default="config.yaml", help="Configuration file"
+        "-c",
+        "--config",
+        type=str,
+        required=False,
+        default="config.yaml",
+        help="Configuration file",
     )
     parser.add_argument(
         "-p",
@@ -113,13 +146,6 @@ def parse_args_fl():
         type=str,
         required=True,
         help="Project profile",
-    )
-    parser.add_argument(
-        "--no-debug",
-        action="store_true",
-        required=False,
-        default=False,
-        help="No debugging",
     )
     parser.add_argument(
         "-k",
@@ -130,19 +156,11 @@ def parse_args_fl():
         help="Keep the log after execution",
     )
     parser.add_argument(
-        "-d",
-        "--dry",
+        "--no-constraint",
         action="store_true",
         required=False,
         default=False,
-        help="Dry run",
-    )
-    parser.add_argument(
-        "--build-only",
-        action="store_true",
-        required=False,
-        default=False,
-        help="Build only, used to test build process",
+        help="Disable constraint",
     )
     parser.add_argument(
         "--rerun",
@@ -152,34 +170,28 @@ def parse_args_fl():
         help="Rerun the localization process",
     )
 
-    args = parser.parse_args()
-
-    profile = load_profile(args.profile)
-    llm_config = load_config(args.config)
-
-    profile["profile"] += f"-{llm_config['model']}"
-    if profile["constraint"] is None:
-        # make constraint tag to the end for sorting
-        if "-nc" in profile["profile"]:
-            profile["profile"] = profile["profile"].replace("-nc", "")
-        profile["profile"] += "-nc"
-    if args.no_debug:
-        profile["profile"] += "-nd"
-    profile["rerun"] = args.rerun
-
-    profile["debug"] = not args.no_debug
-
-    return args, profile, llm_config
+    return _parse_args(parser)
 
 
 def parse_args_pg():
+    """
+    -c, --config: configuration file
+    -p, --profile: project profile
+    --keep: keep the log after execution
+    --no-constraint: disable constraint
+    """
     parser = argparse.ArgumentParser(
-        prog="Tech",
-        description="Patch Generation",
+        prog="Patch Generation",
+        description="Perform patch generation",
         epilog="Enjoy the program! :)",
     )
     parser.add_argument(
-        "-c", "--config", type=str, default="config.yaml", help="Configuration file"
+        "-c",
+        "--config",
+        type=str,
+        required=False,
+        default="config.yaml",
+        help="Configuration file",
     )
     parser.add_argument(
         "-p",
@@ -187,14 +199,6 @@ def parse_args_pg():
         type=str,
         required=True,
         help="Project profile",
-    )
-    # to make the log profile compatible with fix localization
-    parser.add_argument(
-        "--no-debug",
-        action="store_true",
-        required=False,
-        default=False,
-        help="No debugging",
     )
     parser.add_argument(
         "-k",
@@ -204,34 +208,36 @@ def parse_args_pg():
         default=False,
         help="Keep the log after execution",
     )
+    parser.add_argument(
+        "--no-constraint",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Disable constraint",
+    )
 
-    args = parser.parse_args()
-
-    profile = load_profile(args.profile)
-    llm_config = load_config(args.config)
-
-    profile["profile"] += f"-{llm_config['model']}"
-    if profile["constraint"] is None:
-        # make constraint tag to the end for sorting
-        if "-nc" in profile["profile"]:
-            profile["profile"] = profile["profile"].replace("-nc", "")
-        profile["profile"] += "-nc"
-    if args.no_debug:
-        profile["profile"] += "-nd"
-
-    profile["debug"] = not args.no_debug
-
-    return args, profile, llm_config
+    return _parse_args(parser)
 
 
 def parse_args_co():
+    """
+    -c, --config: configuration file
+    -p, --profile: project profile
+    --keep: keep the log after execution
+    --no-constraint: disable constraint
+    """
     parser = argparse.ArgumentParser(
-        prog="Echo",
-        description="Patch Generation (Chat Only)",
+        prog="Chat Only",
+        description="Perform chat only patch generation",
         epilog="Enjoy the program! :)",
     )
     parser.add_argument(
-        "-c", "--config", type=str, default="config.yaml", help="Configuration file"
+        "-c",
+        "--config",
+        type=str,
+        required=False,
+        default="config.yaml",
+        help="Configuration file",
     )
     parser.add_argument(
         "-p",
@@ -239,14 +245,6 @@ def parse_args_co():
         type=str,
         required=True,
         help="Project profile",
-    )
-    # to make the log profile compatible with fix localization
-    parser.add_argument(
-        "--no-debug",
-        action="store_true",
-        required=False,
-        default=False,
-        help="No debugging",
     )
     parser.add_argument(
         "-k",
@@ -256,40 +254,59 @@ def parse_args_co():
         default=False,
         help="Keep the log after execution",
     )
+    parser.add_argument(
+        "--no-constraint",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Disable constraint",
+    )
+
+    return _parse_args(parser)
+
+
+def parse_args_build():
+    """
+    -p, --profile: project profile
+    """
+    parser = argparse.ArgumentParser(
+        prog="Build",
+        description="Prepare workspace",
+        epilog="Enjoy the program! :)",
+    )
+
+    parser.add_argument(
+        "-p",
+        "--profile",
+        type=str,
+        required=True,
+        help="Project profile",
+    )
 
     args = parser.parse_args()
+    profile = _load_profile(args.profile)
 
-    profile = load_profile(args.profile)
-    llm_config = load_config(args.config)
-
-    profile["profile"] += f"-{llm_config['model']}"
-
-    # Disable constraint for chat only
-    profile["constraint"] = None
-
-    if profile["constraint"] is None:
-        # make constraint tag to the end for sorting
-        if "-nc" in profile["profile"]:
-            profile["profile"] = profile["profile"].replace("-nc", "")
-        profile["profile"] += "-nc"
-    if args.no_debug:
-        profile["profile"] += "-nd"
-
-    profile["debug"] = not args.no_debug
-
-    return args, profile, llm_config
+    return args, profile, None
 
 
 def parse_args_validate():
+    """
+    -c, --config: configuration file
+    -p, --profile: project profile
+    --keep: keep the log after execution
+    """
     parser = argparse.ArgumentParser(
-        prog="Hunter",
-        description="Patch valiation",
+        prog="Validation",
+        description="Validate the patch",
         epilog="Enjoy the program! :)",
     )
-
-    # dummy
     parser.add_argument(
-        "-c", "--config", type=str, default="config.yaml", help="Configuration file"
+        "-c",
+        "--config",
+        type=str,
+        required=False,
+        default="config.yaml",
+        help="Configuration file",
     )
     parser.add_argument(
         "-p",
@@ -298,15 +315,6 @@ def parse_args_validate():
         required=True,
         help="Project profile",
     )
-    # dummy
-    parser.add_argument(
-        "--no-debug",
-        action="store_true",
-        required=False,
-        default=False,
-        help="No debugging",
-    )
-    # dummy
     parser.add_argument(
         "-k",
         "--keep",
@@ -316,8 +324,4 @@ def parse_args_validate():
         help="Keep the log after execution",
     )
 
-    args = parser.parse_args()
-
-    profile = load_profile(args.profile)
-
-    return args, profile, None
+    return _parse_args(parser)

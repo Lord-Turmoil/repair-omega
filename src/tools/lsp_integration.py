@@ -2,8 +2,6 @@ import json
 import os
 import subprocess
 
-from tools.file_utils import file_get_content
-
 
 def _to_lsp_request(id, method, params):
     request = {"jsonrpc": "2.0", "id": id, "method": method}

@@ -3,51 +3,62 @@
 function usage {
     echo "Usage: $0 -p <profile> [-c <config>] [-k -t]"
     echo "  -p <profile> : specify the profile to run (default is sample)"
-    echo "  -c <config>  : specify the config file to use (default is config.yaml)"
+    echo "  -c <config>  : specify the config file to use"
     echo "  -k           : keep the log files"
     echo "  -t           : auto terminate"
     exit 1
 }
 
 exe=src/chat_only.py
+if [ ! -f $exe ]; then
+    echo "Error: $exe not found"
+    exit 1
+fi
 
-profile="sample"
-config="config.yaml"
-keep=0
-auto=0
-while getopts "p:c:dkbnth" opt; do
+CONFIG="config.yaml"
+PROFILE=""
+KEEP=0
+AUTO_TERMINATE=0
+NO_CONSTRAINT=0
+while getopts "c:p:ktnh" opt; do
     case ${opt} in
-        p )
-            profile=$OPTARG
-            ;;
         c )
-            config=$OPTARG
+            CONFIG=$OPTARG
+            ;;
+        p )
+            PROFILE=$OPTARG
             ;;
         k )
-            keep=1
+            KEEP=1
             ;;
         t )
-            auto=1
+            AUTO_TERMINATE=1
+            ;;
+        n )
+            NO_CONSTRAINT=1
             ;;
         h )
             usage
             ;;
-        \? )
+        * )
             # omit
             ;;
     esac
 done
 
-if [ "$profile" == "sample" ]; then
+if [ "$PROFILE" == "sample" ]; then
     echo -e "\033[33mWarning: using sample profile\033[0m"
 fi
 
-options="--config $config --profile $profile"
-if [ $keep -eq 1 ]; then
+options="--config $CONFIG --profile $PROFILE"
+if [ $KEEP -eq 1 ]; then
     options="$options --keep"
 fi
+if [ $NO_CONSTRAINT -eq 1 ]; then
+    options="$options --no-constraint"
+fi
 
-if [ $auto -eq 1 ]; then
+if [ $AUTO_TERMINATE -eq 1 ]; then
     echo exit | python3 $exe $options
     echo ""
 else

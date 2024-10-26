@@ -3,7 +3,7 @@
 ######################################################################
 # Fix Localization
 
-FL_SYSTEM_DBG = (
+FL_SYSTEM = (
     "You are an security expert responsible for analyzing crashes in programs using GDB and Language Server to identify possible fix locations for bugs. "
     "You will be presented with a program that crashes due to a bug. "
     "The crash or stop may be caused by an assertion failure or runtime errors. "
@@ -86,9 +86,7 @@ FL_INITIAL_MESSAGE = "Use the functions provided to analyze the crash in the pro
 
 FL_CONSTRAINT = "You should pay attention to this constraint on related variables: {}"
 
-FL_IGNORE_LOCATIONS = (
-    "The following locations are invalid for fixing the bug, please ignore them:\n{}"
-)
+FL_IGNORE_LOCATIONS = "The following locations are proved to be invalid for fixing the bug, please ignore them:\n{}"
 
 FL_AFTER_RUN_TO_LINE = (
     "Think of the constraint and expected state of the program here based on the constraint at other lines. "

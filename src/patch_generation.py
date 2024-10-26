@@ -1,23 +1,17 @@
-import datetime
 import json
-import logging
 import os
-from arguments import parse_args_pg
-from consts import PATCH_INPUT, PATCH_OUTPUT, PATCH_SNAPSHOT
-from functions import apply_patch, run_program, set_validate_callback, undo_patch
+import shutil
+
+from agent.agent import agent_init_pg
+from agent.functions import set_validate_callback, validate
+from shared.arguments import parse_args_pg
+from shared.consts import PATCH_INPUT, PATCH_OUTPUT, PATCH_SNAPSHOT
+from shared.prompt import PG_CONSTRAINT, PG_INITIAL_MESSAGE
+from shared.utils import get_duration, get_logger
 from tools.gdb_integration import gdb_exit, gdb_init
 from tools.lsp_integration import lsp_exit, lsp_init
-from agent import agent_init_pg
-import shutil
-import subprocess
-from prompt import PG_CONSTRAINT, PG_INITIAL_MESSAGE
-import coloredlogs
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
-logger.addHandler(logging.FileHandler("pg.log", "w"))
-coloredlogs.install(level="DEBUG", logger=logger)
+logger = get_logger(__name__, log_file="pg.log")
 
 
 def load_locations(profile):
@@ -33,58 +27,6 @@ def load_locations(profile):
         exit(0)
 
     return locations
-
-
-def test_build(profile):
-    build = subprocess.run(
-        profile["build"],
-        cwd=profile["sandbox"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
-    if build.returncode == 0:
-        return True, ""
-    logger.error("Failed to build project")
-
-    return False, build.stderr.decode("utf-8")
-
-
-def test_run(profile):
-    result = run_program()
-    if "[PASSED]" in result:
-        return True, ""
-    return False, result
-
-
-def validate(profile):
-    """
-    Validate the patch by building the project.
-    """
-    logger.info("Validating patch")
-
-    status, message = apply_patch()
-    if not status:
-        logger.error(f"Failed to apply patch: {message}")
-        return message
-
-    status, result = test_build(profile)
-    if status:
-        status, result = test_run(profile)
-        if status:
-            return None
-        else:
-            result = f"The program still crashes: {result}"
-            logger.error(result)
-    else:
-        result = f"Patch is syntactically invalid, please check brace matching and variable names"
-        logger.error(f"{result}: {message}")
-
-    status, message = undo_patch()
-    if not status:
-        logger.error(f"Failed to undo patch: {message}")
-        return message
-
-    return result
 
 
 def keep_log(profile):
@@ -128,7 +70,7 @@ if __name__ == "__main__":
         initial += "\n" + PG_CONSTRAINT.format(profile["constraint"])
 
     # set validate callback
-    set_validate_callback(lambda: validate(profile))
+    set_validate_callback(lambda: validate(logger, profile))
 
     chat_result = None
     try:
@@ -136,6 +78,7 @@ if __name__ == "__main__":
             assistant,
             message=initial,
         )
+        print("")
     except Exception as e:
         logger.error(f"Chat terminated with exception: {e}")
     finally:
@@ -155,7 +98,7 @@ if __name__ == "__main__":
             patch = f.read()
         snapshot["patch"] = json.loads(patch)
 
-        snapshot["finished"] = str(datetime.datetime.now())
+        snapshot["duration"] = "{:.2f}s".format(get_duration(profile))
         with open(PATCH_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))
 

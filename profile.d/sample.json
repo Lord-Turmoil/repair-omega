@@ -17,5 +17,6 @@
     "sandbox": "",
     "work": "",
     "constraint": "i is less than count",
-    "function": "sum"
+    "function": "sum",
+    "file": "main.c"
 }

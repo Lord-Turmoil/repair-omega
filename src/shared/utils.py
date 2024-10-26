@@ -1,5 +1,39 @@
+import datetime
+import logging
 import os
 import shutil
+
+import coloredlogs
+
+
+def get_logger(name, level=logging.INFO, log_file=None):
+    log_formatter = logging.Formatter(
+        "%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s",
+        datefmt="%d/%m/%Y %H:%M:%S",
+    )
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    if log_file is not None:
+        file_handler = logging.FileHandler(log_file, "w")
+        file_handler.setFormatter(log_formatter)
+        file_handler.setLevel(level)
+        logger.addHandler(file_handler)
+    logger.addHandler(logging.StreamHandler())
+
+    coloredlogs.install(level=level, logger=logger)
+
+    return logger
+
+
+def get_duration(profile):
+    """
+    get duration in seconds from profile
+    """
+    timestamp = datetime.datetime.strptime(profile["timestamp"], "%Y-%m-%d %H:%M:%S.%f")
+    duration = datetime.datetime.now() - timestamp
+    return duration.total_seconds()
 
 
 def ensure_empty_dir(directory: str):

@@ -1,62 +1,19 @@
-import datetime
 import json
-import logging
 import os
 import shutil
-import subprocess
-from arguments import parse_args_fl
-from consts import LOCALIZATION_OUTPUT, LOCALIZATION_SNAPSHOT
-from tools.utils import copy_dir_content, ensure_empty_dir
-from tools.lsp_integration import lsp_exit, lsp_init
+
+from agent.agent import agent_init_fl
+from shared.arguments import parse_args_fl
+from shared.consts import LOCALIZATION_OUTPUT, LOCALIZATION_SNAPSHOT
+from shared.prompt import FL_CONSTRAINT, FL_IGNORE_LOCATIONS, FL_INITIAL_MESSAGE
+from shared.utils import get_duration, get_logger
 from tools.gdb_integration import gdb_exit, gdb_init
-from agent import agent_init_fl
-from prompt import FL_CONSTRAINT, FL_IGNORE_LOCATIONS, FL_INITIAL_MESSAGE
-import coloredlogs
+from tools.lsp_integration import lsp_exit, lsp_init
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
-logger.addHandler(logging.FileHandler("fl.log", "w"))
-coloredlogs.install(level="DEBUG", logger=logger)
+logger = get_logger(__name__, log_file="fl.log")
 
 
-def prepare_sandbox(profile):
-    ensure_empty_dir(profile["sandbox"])
-    copy_dir_content(profile["project"], profile["sandbox"])
-
-
-def prepare_work(profile):
-    ensure_empty_dir(profile["work"])
-    if profile["init"]:
-        copy_dir_content(profile["init"], profile["work"])
-
-
-def build_project(profile):
-    if profile["pre-build"] is not None:
-        pre_build = subprocess.run(
-            profile["pre-build"],
-            cwd=profile["sandbox"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-        )
-        if pre_build.returncode != 0:
-            logger.error("Failed to pre-build project")
-            logger.error(pre_build.stderr.decode("utf-8"))
-            exit(1)
-
-    build = subprocess.run(
-        profile["build"],
-        cwd=profile["sandbox"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
-    if build.returncode != 0:
-        logger.error("Failed to build project")
-        logger.error(build.stderr.decode("utf-8"))
-        exit(1)
-
-
-def load_locations(profile):
+def load_locations():
     if not os.path.exists(LOCALIZATION_OUTPUT):
         logger.error("No fix locations provided")
         exit(1)
@@ -65,7 +22,7 @@ def load_locations(profile):
         locations = json.load(f)
 
     if locations["root_cause"] is None or len(locations["locations"]) == 0:
-        logger.error("No need for patching")
+        logger.warning("No need for fix localization")
         exit(0)
 
     return locations
@@ -97,23 +54,9 @@ if __name__ == "__main__":
         logger.warning("Rerun requested")
         locations = load_locations(profile)
 
-    if args.dry:
-        logger.info("Preparing sandbox for dry run")
-        prepare_sandbox(profile)
-
-    logger.info("Building project")
-    build_project(profile)
-
-    logger.info("Preparing work directory")
-    prepare_work(profile)
-
     if not os.path.exists(profile["run"]):
-        logger.error(f"Run file {profile['run']} not found")
+        logger.error(f"Executable {profile['run']} not found, forget to build?")
         exit(1)
-
-    if args.build_only:
-        logger.info("Build only specified, exiting")
-        exit(0)
 
     logger.info("Initializing GDB")
     gdb_init(
@@ -130,7 +73,6 @@ if __name__ == "__main__":
 
     logger.info("Initiating chat")
     initial = FL_INITIAL_MESSAGE
-    # assert profile["constraint"]
     if profile["constraint"] is not None:
         initial += "\n" + FL_CONSTRAINT.format(profile["constraint"])
     if locations is not None:
@@ -143,6 +85,7 @@ if __name__ == "__main__":
             assistant,
             message=initial,
         )
+        print("")
     except Exception as e:
         logger.error(f"Chat terminated with exception: {e}")
     finally:
@@ -150,7 +93,7 @@ if __name__ == "__main__":
 
         # keep the log even if the chat aborts
         chat_log = {"system": system_message}
-        if chat_result:
+        if chat_result is not None:
             chat_log["history"] = chat_result.chat_history
             chat_log["cost"] = chat_result.cost
         else:
@@ -163,7 +106,7 @@ if __name__ == "__main__":
             locations = json.load(f)
         snapshot["locations"] = locations
 
-        snapshot["finished"] = str(datetime.datetime.now())
+        snapshot["duration"] = "{:.2f}s".format(get_duration(profile))
         with open(LOCALIZATION_SNAPSHOT, "w") as f:
             f.write(json.dumps(snapshot, indent=4))
 
