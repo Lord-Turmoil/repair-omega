@@ -67,6 +67,7 @@ for profile in $PROFILES; do
     index=$((index+1))
     printf "[%2s/%2s] %-30s ... " $index $total $profile
 
+    rm -f $result_file
     # avoid too much output in the console
     start=`date +%s`
     bash $exe -p $profile $options > batch.out 2>&1
