@@ -63,7 +63,7 @@ CONFIG="config.yaml"
 PROFILE=""
 KEEP=0
 NO_CONSTRAINT=0
-while getopts "c:p:kn" opt; do
+while getopts "c:p:knh" opt; do
     case ${opt} in
         c )
             CONFIG=$OPTARG
@@ -76,12 +76,6 @@ while getopts "c:p:kn" opt; do
             ;;
         n )
             NO_CONSTRAINT=1
-            ;;
-        h )
-            usage
-            ;;
-        \? )
-            # omit
             ;;
     esac
 done

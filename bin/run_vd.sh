@@ -17,8 +17,9 @@ fi
 CONFIG="config.yaml"
 PROFILE=""
 KEEP=0
+NO_CONSTRAINT=0
 OPTERR=0  # supress error
-while getopts "c:p:kh" opt; do
+while getopts "c:p:knh" opt; do
     case ${opt} in
         c )
             CONFIG=$OPTARG
@@ -28,6 +29,9 @@ while getopts "c:p:kh" opt; do
             ;;
         k )
             KEEP=1
+            ;;
+        n )
+            NO_CONSTRAINT=1
             ;;
         h )
             usage
@@ -41,6 +45,9 @@ done
 options="--config $CONFIG --profile $PROFILE"
 if [ $KEEP -eq 1 ]; then
     options="$options --keep"
+fi
+if [ $NO_CONSTRAINT -eq 1 ]; then
+    options="$options --no-constraint"
 fi
 
 python3 $exe $options

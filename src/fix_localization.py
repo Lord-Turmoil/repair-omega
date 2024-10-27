@@ -52,7 +52,7 @@ if __name__ == "__main__":
     locations = None
     if profile["rerun"]:
         logger.warning("Rerun requested")
-        locations = load_locations(profile)
+        locations = load_locations()
 
     if not os.path.exists(profile["run"]):
         logger.error(f"Executable {profile['run']} not found, forget to build?")
@@ -88,6 +88,7 @@ if __name__ == "__main__":
         print("")
     except Exception as e:
         logger.error(f"Chat terminated with exception: {e}")
+        snapshot["error"] = str(e)
     finally:
         logger.info("Chat terminated")
 
@@ -102,8 +103,15 @@ if __name__ == "__main__":
 
         snapshot["dialog"] = chat_log
 
-        with open(LOCALIZATION_OUTPUT, "r") as f:
-            locations = json.load(f)
+        if os.path.exists(LOCALIZATION_OUTPUT):
+            with open(LOCALIZATION_OUTPUT, "r") as f:
+                locations = json.load(f)
+        else:
+            locations = {
+                "root_cause": None,
+                "locations": [],
+                "error": "Failed to generate fix locations, see snapshot['error']",
+            }
         snapshot["locations"] = locations
 
         snapshot["duration"] = "{:.2f}s".format(get_duration(profile))

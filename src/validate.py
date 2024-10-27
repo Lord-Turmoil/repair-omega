@@ -28,6 +28,7 @@ def validate_patch(profile):
     else:
         result = f"Patch is syntactically invalid: {result}"
         logger.error(f"{result}: {message}")
+    return result
 
 
 if __name__ == "__main__":

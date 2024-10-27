@@ -23,14 +23,14 @@ function run() {
         prefix="(Re) "
     fi
     echo -e "\033[36m${prefix}Running Fix Localization\033[0m"
-    bash $fl $options $run_options -t
+    bash $fl $options $run_options
     if [ $? -ne 0 ]; then
         echo -e "\033[31mFix Localization failed\033[0m"
         exit 1
     fi
 
     echo -e "\033[36m${prefix}Running Patch Generation\033[0m"
-    bash $pg $options -t
+    bash $pg $options
     if [ $? -ne 0 ]; then
         echo -e "\033[31mPatch Generation failed\033[0m"
         exit 1
@@ -55,9 +55,9 @@ function validate() {
         exit 0
     elif [ "$result" == "invalid" ]; then
         if [ $retry -eq 1 ]; then
-            echo -e "\033[33mFailed after second try\033[0m"
+            echo -e "\033[31mFailed after second try\033[0m"
         else
-            echo -e "\033[31mFailed, attempt to retry\033[0m"
+            echo -e "\033[33mFailed, attempt to retry\033[0m"
         fi
     else
         echo -e "\033[33mUnknown error, aborted\033[0m"
@@ -88,7 +88,7 @@ CONFIG="config.yaml"
 PROFILE=""
 KEEP=0
 NO_CONSTRAINT=0
-while getopts "c:p:kn" opt; do
+while getopts "c:p:knh" opt; do
     case ${opt} in
         c )
             CONFIG=$OPTARG
@@ -102,12 +102,6 @@ while getopts "c:p:kn" opt; do
         n )
             NO_CONSTRAINT=1
             ;;
-        h )
-            usage
-            ;;
-        \? )
-            # omit
-            ;;
     esac
 done
 
@@ -116,7 +110,7 @@ if [ -z "$PROFILE" ]; then
     exit 1
 fi
 
-options="-c $CONFIG -p $PROFILE"
+options="-c $CONFIG -p $PROFILE -t"
 if [ $KEEP -eq 1 ]; then
     options="$options -k"
 fi

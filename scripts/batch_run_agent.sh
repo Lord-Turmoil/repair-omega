@@ -21,9 +21,6 @@ while getopts "p:nh" opt; do
         n )
             NO_CONSTRAINT=1
             ;;
-        h )
-            usage
-            ;;
     esac
 done
 

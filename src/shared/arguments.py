@@ -323,5 +323,12 @@ def parse_args_validate():
         default=False,
         help="Keep the log after execution",
     )
+    parser.add_argument(
+        "--no-constraint",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Disable constraint",
+    )
 
     return _parse_args(parser)

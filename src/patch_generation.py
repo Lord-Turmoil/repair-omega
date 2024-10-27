@@ -14,7 +14,7 @@ from tools.lsp_integration import lsp_exit, lsp_init
 logger = get_logger(__name__, log_file="pg.log")
 
 
-def load_locations(profile):
+def load_locations():
     if not os.path.exists(PATCH_INPUT):
         logger.error("No fix locations provided")
         exit(1)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # log of essential information
     snapshot = {"profile": profile}
 
-    locations = load_locations(profile)
+    locations = load_locations()
     snapshot["locations"] = locations
 
     logger.info("Initializing GDB")
@@ -81,6 +81,7 @@ if __name__ == "__main__":
         print("")
     except Exception as e:
         logger.error(f"Chat terminated with exception: {e}")
+        snapshot["error"] = str(e)
     finally:
         logger.info("Chat terminated")
         # keep the log even if the chat aborts
@@ -94,8 +95,11 @@ if __name__ == "__main__":
 
         snapshot["dialog"] = chat_log
 
-        with open(PATCH_OUTPUT, "r") as f:
-            patch = f.read()
+        if os.path.exists(PATCH_OUTPUT):
+            with open(PATCH_OUTPUT, "r") as f:
+                patch = f.read()
+        else:
+            patch = {"failed": "Failed to generate patch, see snapshot['error']"}
         snapshot["patch"] = json.loads(patch)
 
         snapshot["duration"] = "{:.2f}s".format(get_duration(profile))
